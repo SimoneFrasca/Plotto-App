@@ -48,14 +48,11 @@ class GeneralOptions:
         
         row = 0; col = 0
         _, col = ui.add_label_entry(frame, "Title:", self.general_opt['title'], entry_width=50, row=row, col=col, tooltip="Title")
-        _, col = ui.add_label(frame, "X/Y dimension:", row=row, col=col)
-        _, col = ui.add_entry(frame, self.general_opt['x_dim'], entry_width=8, row=row, col=col, tooltip="X dimension")
-        _, col = ui.add_label(frame, "-", row=row, col=col)
-        _, col = ui.add_entry(frame, self.general_opt['y_dim'], entry_width=8, row=row, col=col, tooltip="Y dimension")
-        _, col = ui.add_label_entry(frame, "X/Y label:", self.general_opt['x_label'], entry_width=40, row=row, col=col, tooltip="X label")
-        _, col = ui.add_label_entry(frame, "-", self.general_opt['y_label'], entry_width=40, row=row, col=col, tooltip="Y label")
-        _, col = ui.add_label_optionmenu(frame, "Logarithmic:", self.general_opt['log'], LOG, row=row, col=col, tooltip="Logarithmic scale")
-
+        _, col = ui.add_label_entry(frame, "X dimension:", self.general_opt['x_dim'], entry_width=8, row=row, col=col, tooltip="X dimension")
+        _, col = ui.add_label_entry(frame, "X label:", self.general_opt['x_label'], entry_width=40, row=row, col=col, tooltip="X label")
+        _, col = ui.add_label_entry(frame, "X min/max:", self.general_opt['x_min'], entry_width=8, row=row, col=col, tooltip="X min")
+        _, col = ui.add_label_entry(frame, "-", self.general_opt['x_max'], entry_width=8, row=row, col=col, tooltip="X max")
+        
         grid_frame = tk.Frame(frame, bg="lightblue", borderwidth=1, relief=tk.SUNKEN)
         grid_frame.grid(row=row, column=col)
         row = 0; col = 0
@@ -66,8 +63,16 @@ class GeneralOptions:
         _, col = ui.add_color(grid_frame, self.general_opt["grid"]["color"], row=row, col=col, tooltip="Color")
         _, col = ui.add_scale(grid_frame, self.general_opt["grid"]['alpha'], from_=0, to=1, resolution=0.05, row=row, col=col, tooltip="Transparency")
         
+
+        row = 1; col = 0
+        _, col = ui.add_label_optionmenu(frame, "Logarithmic:", self.general_opt['log'], LOG, row=row, col=col, tooltip="Logarithmic scale")
+        _, col = ui.add_label_entry(frame, "Y dimension:", self.general_opt['y_dim'], entry_width=8, row=row, col=col, tooltip="Y dimension")
+        _, col = ui.add_label_entry(frame, "Y label:", self.general_opt['y_label'], entry_width=40, row=row, col=col, tooltip="Y label")
+        _, col = ui.add_label_entry(frame, "Y min/max:", self.general_opt['y_min'], entry_width=8, row=row, col=col, tooltip="Y min")
+        _, col = ui.add_label_entry(frame, "-", self.general_opt['y_max'], entry_width=8, row=row, col=col, tooltip="Y max")
+        
         sci_frame = tk.Frame(frame, bg="lightgreen", borderwidth=1, relief=tk.SUNKEN)
-        sci_frame.grid(row=0, column=15)
+        sci_frame.grid(row=row, column=col)
         row = 0; col = 0
         _, col = ui.add_label_optionmenu(sci_frame, "Scientific notation:", self.general_opt['sci']['style'], ['plain', 'sci'], row=row, col=col, tooltip="Style:\n⦿ Plain: standard\n⦿ Sci: scientific")
         _, col = ui.add_optionmenu(sci_frame, self.general_opt['sci']['axis'], AXIS, row=row, col=col, tooltip="Axis")

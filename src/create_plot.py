@@ -75,6 +75,13 @@ class CreatePlot:
             figsize=(float(self.structure_opt["x_dim"].get()), float(self.structure_opt["y_dim"].get()))
         )
         print("Figure size:", self.structure_opt["x_dim"].get(), "x", self.structure_opt["y_dim"].get())
+        if self.structure_opt['x_min'].get() != "" and self.structure_opt['x_max'].get() != "":
+            main_ax.set_xlim(self.safe_float(self.structure_opt['x_min'].get()), self.safe_float(self.structure_opt['x_max'].get()))
+        if self.structure_opt['y_min'].get() != "" and self.structure_opt['y_max'].get() != "":
+            main_ax.set_ylim(self.safe_float(self.structure_opt['y_min'].get()), self.safe_float(self.structure_opt['y_max'].get()))
+
+        print("Axis limits set to: x=(", self.structure_opt['x_min'].get(), ",", self.structure_opt['x_max'].get(),")   y=(",
+              self.structure_opt['y_min'].get(),",", self.structure_opt['y_max'].get(), ")")
 
         print("Title:", self.structure_opt['title'].get())
         print("X Label:", self.structure_opt['x_label'].get())

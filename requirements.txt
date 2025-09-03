@@ -1,0 +1,8 @@
+# ...existing code...
+matplotlib
+numpy
+pandas
+Pillow
+scipy
+# Note: tkinter è fornito dal pacchetto di sistema (es. python3-tk su Debian/Ubuntu)
+# ...existing code...

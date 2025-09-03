@@ -386,67 +386,73 @@ class CreatePlot:
 
         if common['function'].get() != "":
             datay = calcola(datay, common['function'].get(), common['parameters'].get())
+            yerr = calcola(yerr, common['function'].get(), common['parameters'].get())
 
-        # Parametri comuni per plot/errorbar
-        plot_args = {
-            'color': self.structure_opt['def_color'].get() if self.structure_opt['def_color'].get() != "None" else common['color'].get(),
-            'alpha': float(self.structure_opt['def_color'].get()) if self.structure_opt['def_color'].get() != "None" else float(common['alpha'].get()),
-            'linestyle': def_plot_opt['def_line'].get() if def_plot_opt['def_line'].get() != "None" else plot_opt['line'].get(),
-            'marker': def_plot_opt['def_marker'].get() if def_plot_opt['def_marker'].get() != "None" else plot_opt['marker'].get(),
-            'markersize': float(plot_opt['ms'].get()) if def_plot_opt['def_ms'].get() == "" else float(def_plot_opt['def_ms'].get()),
-            'linewidth': float(plot_opt['lw'].get()) if def_plot_opt['def_lw'].get() == "" else float(def_plot_opt['def_lw'].get()),
-            'markerfacecolor': plot_opt['mfcolor'].get() if plot_opt["mfc"].get() == "Yes" else common['color'].get(),
-            'label': common['label'].get()
-        }
+        try:
 
-        # Usa errorbar solo se almeno uno tra xerr e yerr è definito
-        if xerr is not None or yerr is not None:
-            # Colore errorbar
-            plot_args['ecolor'] = (def_errorbar_opt['ecolor'].get() if def_errorbar_opt['ecolor'].get() != "None"else error_opt["ecolor"].get())
-            # Spessore linea delle barre
-            plot_args['elinewidth'] = (float(def_errorbar_opt['elinewidth'].get()) if def_errorbar_opt['elinewidth'].get() != "" else float(error_opt["elinewidth"].get()))
-            # Lunghezza cappette
-            plot_args['capsize'] = (float(def_errorbar_opt['capsize'].get())if def_errorbar_opt['capsize'].get() != "" else float(error_opt["capsize"].get()))
-            # Spessore cappette
-            plot_args['capthick'] = (float(def_errorbar_opt['capthick'].get()) if def_errorbar_opt['capthick'].get() != "" else float(error_opt["capthick"].get()))
-            plot_args['xerr'] = xerr
-            plot_args['yerr'] = yerr
-            ax.errorbar(datax,datay,**plot_args)
-        else:
-            ax.plot(datax,datay,**plot_args)
-        
-        if plot_opt['fit']['plot_reg'].get() == "Yes":
-            x = np.linspace(np.min(datax), np.max(datax), 1000)
-            reg_type = plot_opt['fit']['type'].get()
-            popt = plot_opt['fit']['params']  # Rimuove .get()
+            # Parametri comuni per plot/errorbar
+            plot_args = {
+                'color': self.structure_opt['def_color'].get() if self.structure_opt['def_color'].get() != "None" else common['color'].get(),
+                'alpha': float(self.structure_opt['def_color'].get()) if self.structure_opt['def_color'].get() != "None" else float(common['alpha'].get()),
+                'linestyle': def_plot_opt['def_line'].get() if def_plot_opt['def_line'].get() != "None" else plot_opt['line'].get(),
+                'marker': def_plot_opt['def_marker'].get() if def_plot_opt['def_marker'].get() != "None" else plot_opt['marker'].get(),
+                'markersize': float(plot_opt['ms'].get()) if def_plot_opt['def_ms'].get() == "" else float(def_plot_opt['def_ms'].get()),
+                'linewidth': float(plot_opt['lw'].get()) if def_plot_opt['def_lw'].get() == "" else float(def_plot_opt['def_lw'].get()),
+                'markerfacecolor': plot_opt['mfcolor'].get() if plot_opt["mfc"].get() == "Yes" else common['color'].get(),
+                'label': common['label'].get()
+            }
 
-            if reg_type == "Linear":
-                y = Functions.linear(x, *popt)
-            elif reg_type == "Quadratic":
-                y = Functions.quadratic(x, *popt)
-            elif reg_type == "Polynomial":
-                y = np.poly1d(popt)(x)
-            elif reg_type == "Logarithmic":
-                mask = x > 0
-                x = x[mask]
-                y = Functions.logarithmic(x, *popt)
-            elif reg_type == "Exponential":
-                y = Functions.exponential(x, *popt)
-            elif reg_type == "Power law":
-                mask = x > 0
-                x = x[mask]
-                y = Functions.powerlaw(x, *popt)
-            elif reg_type == "Sigmoid":
-                y = Functions.sigmoid(x, *popt)
+            # Usa errorbar solo se almeno uno tra xerr e yerr è definito
+            if xerr is not None or yerr is not None:
+                # Colore errorbar
+                plot_args['ecolor'] = (def_errorbar_opt['ecolor'].get() if def_errorbar_opt['ecolor'].get() != "None"else error_opt["ecolor"].get())
+                # Spessore linea delle barre
+                plot_args['elinewidth'] = (float(def_errorbar_opt['elinewidth'].get()) if def_errorbar_opt['elinewidth'].get() != "" else float(error_opt["elinewidth"].get()))
+                # Lunghezza cappette
+                plot_args['capsize'] = (float(def_errorbar_opt['capsize'].get())if def_errorbar_opt['capsize'].get() != "" else float(error_opt["capsize"].get()))
+                # Spessore cappette
+                plot_args['capthick'] = (float(def_errorbar_opt['capthick'].get()) if def_errorbar_opt['capthick'].get() != "" else float(error_opt["capthick"].get()))
+                plot_args['xerr'] = xerr
+                plot_args['yerr'] = yerr
+                ax.errorbar(datax,datay,**plot_args)
+            else:
+                ax.plot(datax,datay,**plot_args)
+            
+            if plot_opt['fit']['plot_reg'].get() == "Yes":
+                x = np.linspace(np.min(datax), np.max(datax), 1000)
+                reg_type = plot_opt['fit']['type'].get()
+                popt = plot_opt['fit']['params']  # Rimuove .get()
 
-            ax.plot(
-                x, y,
-                linestyle=plot_opt['fit']['line'].get() if plot_opt['fit']['line'].get() != "None" else self.plot_opt['def_line'].get(),
-                linewidth=float(plot_opt['fit']['lw'].get()) if plot_opt['fit']['lw'].get() != "" else float(self.plot_opt['def_lw'].get()),
-                color=plot_opt['fit']['color'].get() if plot_opt['fit']['color'].get() != "" else self.plot_opt['def_color'].get(),
-                alpha=float(plot_opt['fit']['alpha'].get()) if plot_opt['fit']['alpha'].get() != "" else 1.0,
-                label=plot_opt['fit']['label'].get() if plot_opt['fit']['label'].get() != "" else None
-            )
+                if reg_type == "Linear":
+                    y = Functions.linear(x, *popt)
+                elif reg_type == "Quadratic":
+                    y = Functions.quadratic(x, *popt)
+                elif reg_type == "Polynomial":
+                    y = np.poly1d(popt)(x)
+                elif reg_type == "Logarithmic":
+                    mask = x > 0
+                    x = x[mask]
+                    y = Functions.logarithmic(x, *popt)
+                elif reg_type == "Exponential":
+                    y = Functions.exponential(x, *popt)
+                elif reg_type == "Power law":
+                    mask = x > 0
+                    x = x[mask]
+                    y = Functions.powerlaw(x, *popt)
+                elif reg_type == "Sigmoid":
+                    y = Functions.sigmoid(x, *popt)
+
+                ax.plot(
+                    x, y,
+                    linestyle=plot_opt['fit']['line'].get() if plot_opt['fit']['line'].get() != "None" else self.plot_opt['def_line'].get(),
+                    linewidth=float(plot_opt['fit']['lw'].get()) if plot_opt['fit']['lw'].get() != "" else float(self.plot_opt['def_lw'].get()),
+                    color=plot_opt['fit']['color'].get() if plot_opt['fit']['color'].get() != "" else self.plot_opt['def_color'].get(),
+                    alpha=float(plot_opt['fit']['alpha'].get()) if plot_opt['fit']['alpha'].get() != "" else 1.0,
+                    label=plot_opt['fit']['label'].get() if plot_opt['fit']['label'].get() != "" else None
+                )
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred while plotting: {e}")
+            return
 
     # ----- Istogramma -----
     def hist(self, options, ax):

@@ -522,7 +522,7 @@ class InsetOptions:
                 "ylabel_size": tk.StringVar(value="10"),        # Y axis label size
                 "xaxis_size": tk.StringVar(value="10"),        # X axis tick label size
                 "yaxis_size": tk.StringVar(value="10"),        # Y axis tick label size
-                "color": tk.StringVar(value=COLOR[0])            # Text color
+                "color": tk.StringVar(value=COLOR[5])            # Text color
             },
             'sci': {
                 'style': tk.StringVar(value='plain'),
@@ -668,7 +668,7 @@ class RegressionApp:
         
         # Funzione che mostra/nasconde entry polinomiale
         def toggle_pol_entry(*args):
-            if self.reg_type.get() == "Polinomiale":
+            if self.reg_type.get() == "Polynomial":
                 self.degree.grid(row=0, column=2)
             else:
                 self.degree.grid_forget()
@@ -714,9 +714,9 @@ class RegressionApp:
                 try:
                     deg = int(self.pol_degree.get())
                     if deg < 1:
-                        raise ValueError("Il grado del polinomio deve essere maggiore di 0.")
+                        raise ValueError("The degree must be a positive integer.")
                 except ValueError:
-                    self.reg_result_label.config(text="Errore: grado polinomiale non valido.", foreground="red")
+                    self.reg_result_label.config(text="Error: polynomial degree is not valid", foreground="red")
                     return
                 
                 coeffs = np.polyfit(x, y, deg)

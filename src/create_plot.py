@@ -128,10 +128,14 @@ class CreatePlot:
               "yaxis:", self.font_opt['yaxis_size'].get(), "color:", self.font_opt['color'].get())
 
         # --- Gestione inset ---
-        for inset_label in self.inset_id:
-            ax = main_ax if inset_label == "inset_0" else self.create_inset(main_ax, inset_label)
-            self.plot_data_for_inset(ax, inset_label)
-            self.plot_functions_for_inset(ax, inset_label)
+        for inset_id in self.inset_id:
+            ax = main_ax if inset_id == "inset_0" else self.create_inset(main_ax, inset_id)
+            self.plot_data_for_inset(ax, inset_id)
+            self.plot_functions_for_inset(ax, inset_id)
+            if inset_id != "inset_0":
+                if self.inset_options[inset_id]['legend']['legend'].get() == "Yes":
+                    ax.legend(loc=self.inset_options[inset_id]['legend']['legend_position'].get(),
+                        fontsize=int(self.inset_options[inset_id]['legend']['legend_size'].get()))
 
         # --- Ottimizza layout ---
         self.fig.tight_layout()  # <- Qui
@@ -245,7 +249,6 @@ class CreatePlot:
     def configure_axes(self, ax, opts):
         common = opts['common']
         grid = opts['grid']
-        legend = opts['legend']
         font = opts['font']
         sci = opts['sci']
 
@@ -272,23 +275,7 @@ class CreatePlot:
                     alpha=float(grid['alpha'].get()),
                     axis=grid['axis'].get())
 
-        legend = opts['legend']
-        if legend['legend'].get() == "Yes":
-            ax.legend(loc=legend['legend_position'].get(),
-                      fontsize=int(legend['legend_size'].get()),
-                      frameon=self.legend_opt['legend_frame'].get() == "Yes",
-                      shadow=self.legend_opt['legend_shadow'].get() == "Yes",
-                      borderpad=float(self.legend_opt['legend_borderpad'].get()),
-                      labelspacing=float(self.legend_opt['legend_labelspacing'].get()),
-                      handlelength=float(self.legend_opt['legend_handlelength'].get()),
-                      handleheight=float(self.legend_opt['legend_handleheight'].get()),
-                      handletextpad=float(self.legend_opt['legend_handletextpad'].get()),
-                      borderaxespad=float(self.legend_opt['legend_borderaxespad'].get()),
-                      ncol=int(self.legend_opt['legend_ncol'].get()),
-                      markerscale=float(self.legend_opt['legend_markerscale'].get()))
-
         font = opts['font']
-
 
         # Titolo
         ax.title.set_fontsize(int(font["title_size"].get()))
@@ -304,8 +291,8 @@ class CreatePlot:
         ax.title.set_color(font["color"].get())
 
 
-    def create_inset(self, main_ax, inset_label):
-        opts = self.inset_options[inset_label]
+    def create_inset(self, main_ax, inset_id):
+        opts = self.inset_options[inset_id]
         ax = main_ax.inset_axes([
             float(opts['position']["left"].get()),
             float(opts['position']["bottom"].get()),
@@ -316,8 +303,8 @@ class CreatePlot:
         return ax
 
     # ----- Plot dei dati -----
-    def plot_data_for_inset(self, ax, inset_label):
-        ids = [d for d in self.data_id if inset_label in d]
+    def plot_data_for_inset(self, ax, inset_id):
+        ids = [d for d in self.data_id if inset_id in d]
         for data_id in ids:
             options = self.data_opt[data_id]
             if options['plot_select'].get() == "plot":
@@ -344,10 +331,9 @@ class CreatePlot:
                 self.polar(options, ax)
             elif options['plot_select'].get() == "stack":
                 self.stack(options, ax)
-                
 
-    def plot_functions_for_inset(self, ax, inset_label):
-        ids = [f for f in self.function_id if inset_label in f]
+    def plot_functions_for_inset(self, ax, inset_id):
+        ids = [f for f in self.function_id if inset_id in f]
         for function_id in ids:
             self.plot_function(self.function_options[function_id], ax)
 
@@ -402,6 +388,7 @@ class CreatePlot:
                 'label': common['label'].get()
             }
 
+            print(options['inset'],common['label'].get())
             # Usa errorbar solo se almeno uno tra xerr e yerr è definito
             if xerr is not None or yerr is not None:
                 # Colore errorbar

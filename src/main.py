@@ -429,24 +429,24 @@ class MainPage(tk.Frame):
             else:
                 return d
 
-        #try:
-        with open(self.filename, "r") as f:
-            saved_data = json.load(f)
+        try:
+            with open(self.filename, "r") as f:
+                saved_data = json.load(f)
 
-        # Ricostruisci gli oggetti con StringVar
-        #print(saved_data.get("general_opt"))
-        self.general_options   = to_stringvar(saved_data.get("general_opt", {}))
-        self.default_options   = to_stringvar(saved_data.get("default_opt", {}))
-        self.data_options      = to_stringvar(saved_data.get("data_opt", {}))
-        #print(self.data_options['inset_0']['common']['x'].get())
-        self.inset_options     = to_stringvar(saved_data.get("inset_options", {}))
-        self.function_options  = to_stringvar(saved_data.get("function_options", {}))
-        self.data_id           = saved_data.get("data_id", [])
-        self.inset_id          = saved_data.get("inset_id", ["inset_0"])
-        self.function_id       = saved_data.get("function_id", [])
+            # Ricostruisci gli oggetti con StringVar
+            #print(saved_data.get("general_opt"))
+            self.general_options   = to_stringvar(saved_data.get("general_opt", {}))
+            self.default_options   = to_stringvar(saved_data.get("default_opt", {}))
+            self.data_options      = to_stringvar(saved_data.get("data_opt", {}))
+            #print(self.data_options['inset_0']['common']['x'].get())
+            self.inset_options     = to_stringvar(saved_data.get("inset_options", {}))
+            self.function_options  = to_stringvar(saved_data.get("function_options", {}))
+            self.data_id           = saved_data.get("data_id", [])
+            self.inset_id          = saved_data.get("inset_id", ["inset_0"])
+            self.function_id       = saved_data.get("function_id", [])
         
-#        except Exception as e:
-#            messagebox.showerror("Errore", f"Impossibile caricare la configurazione:\n{e}")
+        except Exception as e:
+            messagebox.showerror("Errore", f"Impossibile caricare la configurazione:\n{e}")
        
     def back_to_main(self):
         # Clear the existing content in the root window

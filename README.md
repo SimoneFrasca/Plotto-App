@@ -1,5 +1,14 @@
 # Plotto App
 
+![Python](https://img.shields.io/badge/python-3.8%2B-blue)
+![License: CC0](https://img.shields.io/badge/License-CC0-green)
+
+| Lingua | Language |
+|--------|----------|
+| 🇮🇹 [Italiano](#-versione-italiana) | 🇬🇧 [English](#-english-version) |
+
+---
+
 ## 🇮🇹 Versione Italiana
 
 **Plotto** è un’applicazione desktop scritta in Python per **visualizzare e analizzare dati** provenienti da file CSV, XML e TXT.  
@@ -38,20 +47,35 @@ pip install -r requirements.txt
 ---
 
 ## 🚀 Installazione
-1. Clona o scarica il progetto ed entra nella cartella:
-   ```bash
-   cd /home/simone/Scrivania/plotto-app
-   ```
-2. Installa le dipendenze:
+Puoi installare Plotto in due modi:
+
+### 1. Download diretto da GitHub
+Scarica lo ZIP dalla pagina ufficiale del progetto:  
+👉 [Download ZIP](https://github.com/SimoneFrasca/Plotto-App)
+
+Quindi estrailo in una cartella a tua scelta, ad esempio:  
+```bash
+cd ~/Plotto-App
+```
+
+### 2. Clonazione con Git
+Se hai **git** installato:  
+```bash
+git clone https://github.com/SimoneFrasca/Plotto-App.git
+cd Plotto-App
+```
+
+### Passaggi successivi comuni
+1. Installa le dipendenze:
    ```bash
    pip install -r requirements.txt
    ```
-3. Rendi eseguibili gli script (opzionale):
+2. Rendi eseguibili gli script (opzionale):
    ```bash
    chmod +x scripts/*.sh || true
    ls -la scripts
    ```
-4. Installa la voce del menu desktop (opzionale):  
+3. Installa la voce del menu desktop (opzionale):  
    ```bash
    ./scripts/install_desktop_entry.sh
    ```
@@ -59,12 +83,12 @@ pip install -r requirements.txt
    - `${XDG_DATA_HOME:-$HOME/.local/share}/applications/plotto.desktop`  
    - e, se esiste, anche in `~/Scrivania`.  
 
-5. Se il file `.desktop` è stato copiato sul Desktop, rendilo eseguibile:
+4. Se il file `.desktop` è stato copiato sul Desktop, rendilo eseguibile:
    ```bash
    chmod +x "$HOME/Scrivania/plotto.desktop"
    ```
 
-6. Aggiungi Plotto al dock / barra delle applicazioni:
+5. Aggiungi Plotto al dock / barra delle applicazioni:
    - Metodo rapido (GNOME):  
      Apri **Attività → cerca "Plotto" → avvia → tasto destro → "Aggiungi ai preferiti"**.  
    - Metodo manuale: copia `plotto.desktop` in `/usr/share/applications` (richiede sudo) o aggiorna il database con:  
@@ -79,7 +103,7 @@ Da dentro la cartella del progetto:
 ```bash
 python3 src/app.py
 ```
-Altrimenti dall'icona sul desktop
+Oppure dall’icona sul desktop.
 
 ---
 
@@ -92,10 +116,15 @@ Altrimenti dall'icona sul desktop
 
 ---
 
+## 🖼️ Screenshot
+*(Inserisci qui un’immagine dell’interfaccia grafica in `docs/screenshot.png`)*
+
+---
+
 ## 📂 Formato dati consigliato
 - **CSV**: prima riga con intestazioni, colonne numeriche per x e y.  
 - **XML**: struttura con nodi dati coerenti (vedi parsing in `src/data_options.py`).  
-- **TXT**: con la stessa struttura del CSV (può anche avere una tabulazione con lo spazio anziché ",")  
+- **TXT**: con la stessa struttura del CSV (può anche avere tabulazioni/spazi invece delle virgole).  
 
 ---
 
@@ -156,7 +185,6 @@ Puoi copiare, modificare, distribuire ed eseguire l’opera, anche per fini comm
 ## 📬 Contatti
 Per domande o segnalazioni, apri una **issue** nel repository GitHub del progetto.  
 
-
 ---
 
 ## 🇬🇧 English Version
@@ -197,20 +225,35 @@ pip install -r requirements.txt
 ---
 
 ## 🚀 Installation
-1. Clone or download the project and navigate into the folder:
-   ```bash
-   cd /home/simone/Scrivania/plotto-app
-   ```
-2. Install dependencies:
+You can install Plotto in two ways:
+
+### 1. Direct download from GitHub
+Download the ZIP from the official project page:  
+👉 [Download ZIP](https://github.com/SimoneFrasca/Plotto-App)
+
+Then extract it into a folder of your choice, e.g.:  
+```bash
+cd ~/Plotto-App
+```
+
+### 2. Clone with Git
+If you have **git** installed:  
+```bash
+git clone https://github.com/SimoneFrasca/Plotto-App.git
+cd Plotto-App
+```
+
+### Common next steps
+1. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
-3. Make scripts executable (optional):
+2. Make scripts executable (optional):
    ```bash
    chmod +x scripts/*.sh || true
    ls -la scripts
    ```
-4. Install desktop entry (optional):  
+3. Install desktop entry (optional):  
    ```bash
    ./scripts/install_desktop_entry.sh
    ```
@@ -218,12 +261,12 @@ pip install -r requirements.txt
    - `${XDG_DATA_HOME:-$HOME/.local/share}/applications/plotto.desktop`  
    - and, if available, also to `~/Desktop`.  
 
-5. If the `.desktop` file was copied to your Desktop, make it executable:
+4. If the `.desktop` file was copied to your Desktop, make it executable:
    ```bash
    chmod +x "$HOME/Desktop/plotto.desktop"
    ```
 
-6. Add Plotto to the dock / application bar:
+5. Add Plotto to the dock / application bar:
    - Quick method (GNOME):  
      Open **Activities → search "Plotto" → run → right-click the icon → "Add to Favorites"**.  
    - Manual method: copy `plotto.desktop` into `/usr/share/applications` (requires sudo) or update the database with:  
@@ -248,6 +291,11 @@ Or simply launch it from the desktop icon.
 3. Load a CSV, XML, or TXT file with your data.  
 4. Customize markers, lines, colors, and axis limits.  
 5. Save the configuration for future use.  
+
+---
+
+## 🖼️ Screenshot
+*(Insert here a screenshot of the GUI in `docs/screenshot.png`)*
 
 ---
 

@@ -1,9 +1,8 @@
 [Desktop Entry]
 Version=1.0
 Type=Application
-Name=Plotto App
-Comment=Applicazione per visualizzare e analizzare dati (CSV/XML)
-Exec=gnome-terminal -- bash -c "/home/simone/Scrivania/plotto-app/scripts/run_plotto.sh; exec bash"
-Icon=/home/simone/Scrivania/plotto-app/src/icona_desktop.png
-Terminal=true
+Name=Plotto
+Exec=gnome-terminal -- bash -c "__BASE_DIR__/scripts/run_plotto.sh; exec bash"
+Icon=__BASE_DIR__/src/icona_desktop.png
+Terminal=false
 Categories=Utility;Education;

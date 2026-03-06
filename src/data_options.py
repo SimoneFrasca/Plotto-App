@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 import matplotlib
 matplotlib.use("TkAgg")
-from ui_elements import dim, MARKER, LINE, LOG, YN, TF, LEGEND, FONTS, COLOR, HISTTYPE, ORIENTATION, ALIGN, PLOT, REGRESSION_FUNCTIONS, AXIS, Helper, Functions
+from ui_elements import dim, MARKER, LINE, LOG, YN, TF, LEGEND, COLOR, ORIENTATION, ALIGN, PLOT, REGRESSION_FUNCTIONS, FUNCTION, HISTTYPE, AXIS, Helper, Functions, DATALOAD
 from ui_elements import convert_file_to_csv, ToggleSwitch
 import numpy as np
 import pandas as pd
@@ -12,6 +12,8 @@ import os
 BASE_DIR = os.path.dirname(__file__)
 
 ui = Helper
+loader = DATALOAD()
+
 
 class DataOptions:
     def __init__(self, root, inset_counter, data_id, file_path, column, data_options, all_data_id, upload=False):
@@ -20,25 +22,50 @@ class DataOptions:
         
         # Options dictionary
         self.data_options = {
-            # Options common to plot and hist
             "data_id": data_id,
             "inset": inset_counter,
             "file path": file_path,            
             "plot_select": tk.StringVar(value="plot"),
+            "show/hide": tk.StringVar(value="1"),
             "common": {
                 "x": tk.StringVar(value=column[0]),
+                "x2": tk.StringVar(value="None"),
                 "x_min": tk.StringVar(value=""),
                 "x_max": tk.StringVar(value=""),
                 "x_err": tk.StringVar(value="None"),
                 "label": tk.StringVar(),
-                "function": tk.StringVar(value=""),
-                "parameters": tk.StringVar(value=""),
+                "y_function": tk.StringVar(value=""),
+                "y_parameters": tk.StringVar(value=""),
+                "x_function": tk.StringVar(value=""),
+                "x_parameters": tk.StringVar(value=""),
                 "color": tk.StringVar(value=COLOR[0]),
-                "alpha": tk.StringVar(value="1")
+                "alpha": tk.StringVar(value="1"),
+                "col_filter1": tk.StringVar(value="None"),
+                "filter1": tk.StringVar(value=""), 
+                "col_compare_filter1": tk.StringVar(value="None"),
+                "col_filter2": tk.StringVar(value="None"),
+                "filter2": tk.StringVar(value=""), 
+                "col_compare_filter2": tk.StringVar(value="None"),
+                "col_filter3": tk.StringVar(value="None"),
+                "filter3": tk.StringVar(value=""), 
+                "col_compare_filter3": tk.StringVar(value="None"),
+                "col_filter4": tk.StringVar(value="None"),
+                "filter4": tk.StringVar(value=""), 
+                "col_compare_filter4": tk.StringVar(value="None"), 
             },
-            # Options specific to plot
+            "fit" : {
+                "plot_reg": tk.StringVar(value="No"),
+                "type": tk.StringVar(value=REGRESSION_FUNCTIONS[0]),
+                "line": tk.StringVar(value=LINE[0]),
+                "lw": tk.StringVar(value="1"),
+                "color": tk.StringVar(value=COLOR[0]),
+                "alpha": tk.StringVar(value="1"),
+                "label": tk.StringVar(value=""),
+                "params": {}                    
+            },
             "plot": {
                 "y": tk.StringVar(value=column[0]),
+                "y2": tk.StringVar(value="None"),
                 "y_min": tk.StringVar(value=""),
                 "y_max": tk.StringVar(value=""),
                 "y_err": tk.StringVar(value="None"),
@@ -48,16 +75,6 @@ class DataOptions:
                 "mfcolor": tk.StringVar(value=COLOR[0]),
                 "line": tk.StringVar(value="None"),
                 "lw": tk.StringVar(value="1"),
-                "fit" : {
-                    "plot_reg": tk.StringVar(value="No"),
-                    "type": tk.StringVar(value=REGRESSION_FUNCTIONS[0]),
-                    "line": tk.StringVar(value=LINE[0]),
-                    "lw": tk.StringVar(value="1"),
-                    "color": tk.StringVar(value=COLOR[0]),
-                    "alpha": tk.StringVar(value="1"),
-                    "label": tk.StringVar(value=""),
-                    "params": {}                    
-                },
                 "errorbar": {
                     "ecolor": tk.StringVar(value=COLOR[0]),
                     "elinewidth": tk.StringVar(value=1.5),
@@ -65,11 +82,11 @@ class DataOptions:
                     "capthick": tk.StringVar(value=1.5)
                 }
             },
-            # Options specific to hist
             "hist": {
+                "histtype": tk.StringVar(value=HISTTYPE[0]),
                 "bins": tk.StringVar(value="10"),
                 "align": tk.StringVar(value=ALIGN[0]),
-                "density": tk.StringVar(value="False"),
+                "density": tk.StringVar(value="True"),
                 'orientation': tk.StringVar(value=ORIENTATION[0]), 
                 'cumulative': tk.StringVar(value="False"), 
                 'bottom': tk.StringVar(value=0), 
@@ -77,7 +94,17 @@ class DataOptions:
                 'contour_color': tk.StringVar(value='None'),
                 'contour_alpha': tk.StringVar(value="1"),
                 'contour_width': tk.StringVar(value="1"),
-                'contour_line': tk.StringVar(value=LINE[0])
+                'contour_line': tk.StringVar(value=LINE[0]),
+                'tick_par' : {
+                    'axis': tk.StringVar(value='both'),          # Applica a 'x', 'y' o 'both'
+                    'direction': tk.StringVar(value='out'),      # Trattino dentro, fuori o a cavallo della linea
+                    'length': tk.StringVar(value=4),            # Lunghezza del trattino
+                    'width': tk.StringVar(value=0.5),              # Spessore del trattino
+                    'color': tk.StringVar(value='black'),         # Colore del trattino
+                    'labelcolor': tk.StringVar(value='black'),     # Colore del testo
+                    'labelsize': tk.StringVar(value=10),         # Dimensione del testo
+                    'pad': tk.StringVar(value=5)                # Distanza tra testo e asse                  
+                }
             },
             "scatter": {
                 "orientation": tk.StringVar(value=ORIENTATION[0]),
@@ -136,6 +163,12 @@ class DataOptions:
         frame = tk.Frame(self.root, relief=tk.SUNKEN, borderwidth=1, bg="lightblue")
         frame.pack(padx=dim.s(5), pady=dim.s(5), fill="x", expand=True)
 
+
+        # --- Frame for specific options: takes full width
+        specific_frame = tk.Frame(frame, bg="lightblue")
+        specific_frame.grid(row=1, column=0, columnspan=5, sticky="ew")
+        specific_frame.grid_columnconfigure(0, weight=1)  # to stretch internally, if necessary
+        
         if self.upload:
             self.data_options = data_options[data_id]
 
@@ -149,37 +182,34 @@ class DataOptions:
             self.trash_icons = []
         self.trash_icons.append(trash_icon)
 
-        file_label = tk.Label(
-            frame,
-            text=f"File: {self.data_options['file path'].split('/')[-1]}",
-            anchor="w", font=("Arial", 12, "bold"), bg="lightblue"
-        )
-        # sticky="ew" to allow stretching
+        file_label = tk.Label(frame,text=f"File: {self.data_options['file path'].split('/')[-1]}",anchor="w", font=("Arial", 12, "bold"), bg="lightblue")
         file_label.grid(row=0, column=1, padx=dim.s(5), pady=dim.s(5), sticky="ew")
 
-        ui.add_label_optionmenu(frame, "Mode:", self.data_options["plot_select"], PLOT, row=0, col=2)
+        self.tool_frame = tk.Frame(frame, bg="lightblue")
+        self.tool_frame.grid(row=0,column=2,sticky="ew")
+        ui.add_checkbutton(self.tool_frame, "Show plot", self.data_options["show/hide"], row=0, col=0, label_font=dim.label_font(14), tooltip="Mostra/Nascondi plot", colorbg="lightblue")
+        ui.add_label_optionmenu(self.tool_frame, "Mode:", self.data_options["plot_select"], PLOT, row=0, col=2, colorbg="lightblue")
+        
+        # Toggle button
+        toggle_button = tk.Button(self.tool_frame, text="Esegui Fit", command=lambda: self.toggle_regression(specific_frame, toggle_button))
+        toggle_button.grid(row=0, column=4, sticky="w", padx=dim.s(5), pady=dim.s(5))
+        # Button to create and show regression frame
 
-        # Arrow button (if you use it)
-                # Variable for expansion state
+
         self.expanded = True  
-
         # Arrow button (initially "▼")
         self.toggle_button = tk.Button(
-            frame, text="▼", width=2, command=lambda: self.toggle_frame(specific_frame)
+            self.tool_frame, text="▼", width=2, command=lambda: self.toggle_frame(specific_frame)
         )
-        self.toggle_button.grid(row=0, column=4, padx=dim.s(5), pady=dim.s(5), sticky="e")
-
+        self.toggle_button.grid(row=0, column=5, padx=dim.s(5), pady=dim.s(5), sticky="e")
+        
+        
 
         # ⬅️ GIVE WEIGHT TO COLUMN 1 (the one with the label)
         frame.grid_columnconfigure(0, weight=0)
         frame.grid_columnconfigure(1, weight=1)  # expands to fill
         frame.grid_columnconfigure(2, weight=0)
         frame.grid_columnconfigure(3, weight=0)
-
-        # --- Frame for specific options: takes full width
-        specific_frame = tk.Frame(frame, bg="lightblue")
-        specific_frame.grid(row=1, column=0, columnspan=5, sticky="ew")
-        specific_frame.grid_columnconfigure(0, weight=1)  # to stretch internally, if necessary
 
     
         # Function to update specific options
@@ -261,15 +291,29 @@ class DataOptions:
         # Initially show options for "plot"
         refresh_options()
        
+    def toggle_regression(self, specific_frame, toggle_button):
+        if hasattr(self, "reg_frame") and self.reg_frame.winfo_exists():
+            self.reg_frame.destroy()
+            toggle_button.config(text="Esegui Fit")
+            self.data_options['fit']['plot_reg'].set("No")
+        else:
+            self.reg_frame = tk.Frame(specific_frame, bg="lightgreen",borderwidth=1, relief=tk.SUNKEN)
+            self.reg_frame.grid(row=2, column=0, columnspan=6, sticky="w")
+            RegressionApp(self.reg_frame, self.data_options, self.data_options["file path"])
+            toggle_button.config(text="Rimuovi fit")
+
+
     def plot_config(self,specific_frame,column):
         container = tk.Frame(specific_frame, bg="lightblue",borderwidth=1, relief=tk.SUNKEN)
         container.grid(row=0, column=0, sticky="ew")
-        canvas = tk.Canvas(container, bg="lightblue", height=dim.s(252), width=dim.s(1000))
+        canvas = tk.Canvas(container, bg="lightblue", height=dim.s(266), width=dim.s(1000))
         canvas.grid(row=0, column=0, sticky="ew")
         h_scrollbar = tk.Scrollbar(container, orient="horizontal", command=canvas.xview)
         h_scrollbar.grid(row=1, column=0, sticky="ew")
         canvas.configure(xscrollcommand=h_scrollbar.set)
-        axis_frame = tk.Frame(canvas, bg="lightblue")
+        
+        color = "lightblue"
+        axis_frame = tk.Frame(canvas, bg=color)
         canvas.create_window((0, 0), window=axis_frame, anchor="nw")
         def update_scrollregion(event):
             canvas.configure(scrollregion=canvas.bbox("all"))
@@ -277,109 +321,229 @@ class DataOptions:
         container.grid_columnconfigure(0, weight=1)
         row, col = 1, 0
 
-        _, col = ui.add_label_entry(axis_frame, "Label:", self.data_options["common"]["label"], entry_width=80, row=row, col=col, columnspan=7,tooltip="Label")
+        _, col = ui.add_label_entry(axis_frame, "Label:", self.data_options["common"]["label"], entry_width=60, row=row, col=col, columnspan=6, tooltip="Etichetta descrittiva per la legenda", colorbg=color)
         row += 1; col = 0
-        _, col = ui.add_label_optionmenu(axis_frame, "X:", self.data_options["common"]["x"], column, row=row, col=col)
-        _, col = ui.add_label_optionmenu(axis_frame, "X error:", self.data_options["common"]["x_err"], column + ["None"], row=row, col=col)
-        _, col = ui.add_label(axis_frame, "X min-max:", row=row, col=col)
-        _, col = ui.add_entry(axis_frame, self.data_options["common"]["x_min"], entry_width=8, row=row, col=col)
-        _, col = ui.add_label(axis_frame, "-", row=row, col=col)
-        _, col = ui.add_entry(axis_frame, self.data_options["common"]["x_max"], entry_width=8, row=row, col=col)
+        _, col = ui.add_label_optionmenu(axis_frame, "X:", self.data_options["common"]["x"], column, row=row, col=col, label_font=("Arial", 10, "bold"), tooltip="Seleziona la colonna per l'asse X", colorbg=color)
+        _, col = ui.add_label_optionmenu(axis_frame, "X error:", self.data_options["common"]["x_err"], column + ["None"], row=row, col=col, tooltip="Seleziona la colonna per l'errore su X", colorbg=color)
+        _, col = ui.add_label_optionmenu(axis_frame, "X2:", self.data_options["common"]["x2"], column + ["None"], row=row, col=col, tooltip="Seleziona un'ulteriore colonna per X", colorbg=color)
+        _, col = ui.add_label(axis_frame, "X min-max:", row=row, col=col, tooltip="Limiti asse X (vuoto per auto)", colorbg=color)
+        _, col = ui.add_entry(axis_frame, self.data_options["common"]["x_min"], entry_width=8, row=row, col=col, tooltip="Valore minimo X")
+        _, col = ui.add_label(axis_frame, "-", row=row, col=col, colorbg=color)
+        _, col = ui.add_entry(axis_frame, self.data_options["common"]["x_max"], entry_width=8, row=row, col=col, tooltip="Valore massimo X")
         row += 1; col = 0
-        _, col = ui.add_label_optionmenu(axis_frame, "Y:", self.data_options["plot"]["y"], column, row=row, col=col)
-        _, col = ui.add_label_optionmenu(axis_frame, "Y error:", self.data_options["plot"]["y_err"], column + ["None"], row=row, col=col)
-        _, col = ui.add_label(axis_frame, "Y min-max:", row=row, col=col)
-        _, col = ui.add_entry(axis_frame, self.data_options["plot"]["y_min"], entry_width=8, row=row, col=col)
-        _, col = ui.add_label(axis_frame, "-", row=row, col=col)
-        _, col = ui.add_entry(axis_frame, self.data_options["plot"]["y_max"], entry_width=8, row=row, col=col)
+        _, col = ui.add_label_entry(axis_frame, "x-Fun:", self.data_options["common"]["x_function"], entry_width=35, row=row, col=col, columnspan=4, tooltip="Funzione di trasformazione per X (es: x*10)", colorbg=color)
+        col += 3
+        _, col = ui.add_label_entry(axis_frame, "x-Par:", self.data_options["common"]["x_parameters"], entry_width=35, row=row, col=col, columnspan=4, tooltip="Parameters: inserire\n parametri nel formato\npar1=value1,par2=value2,...", colorbg=color)
         row += 1; col = 0
-        _, col = ui.add_label_entry(axis_frame, "Function:", self.data_options["common"]["function"], entry_width=80, row=row, col=col, columnspan=7,tooltip="Function")
+        _, col = ui.add_label_optionmenu(axis_frame, "Y:", self.data_options["plot"]["y"], column, row=row, col=col, label_font=("Arial", 10, "bold"), tooltip="Seleziona la colonna per l'asse Y", colorbg=color)
+        _, col = ui.add_label_optionmenu(axis_frame, "Y error:", self.data_options["plot"]["y_err"], column + ["None"], row=row, col=col, tooltip="Seleziona la colonna per l'errore su Y", colorbg=color)
+        _, col = ui.add_label_optionmenu(axis_frame, "Y2:", self.data_options["plot"]["y2"], column + ["None"], row=row, col=col, tooltip="Seleziona un'ulteriore colonna per Y", colorbg=color)
+        _, col = ui.add_label(axis_frame, "Y min-max:", row=row, col=col, tooltip="Limiti asse Y (vuoto per auto)", colorbg=color)
+        _, col = ui.add_entry(axis_frame, self.data_options["plot"]["y_min"], entry_width=8, row=row, col=col, tooltip="Valore minimo Y")
+        _, col = ui.add_label(axis_frame, "-", row=row, col=col, colorbg=color)
+        _, col = ui.add_entry(axis_frame, self.data_options["plot"]["y_max"], entry_width=8, row=row, col=col, tooltip="Valore massimo Y")
         row += 1; col = 0
-        _, col = ui.add_label_entry(axis_frame, "Parameters:", self.data_options["common"]["parameters"], entry_width=80, row=row, col=col, columnspan=7,tooltip="Parameters: inserire\n parametri nel formato\npar1=value1,par2=value2,...")
+        _, col = ui.add_label_entry(axis_frame, "y-Fun:", self.data_options["common"]["y_function"], entry_width=35, row=row, col=col, columnspan=4, tooltip="Funzione di trasformazione per Y (es: y/2)", colorbg=color)
+        col += 3
+        _, col = ui.add_label_entry(axis_frame, "y-Par:", self.data_options["common"]["y_parameters"], entry_width=35, row=row, col=col, columnspan=4, tooltip="Parameters: inserire\n parametri nel formato\npar1=value1,par2=value2,...", colorbg=color)
         
-        options_frame = tk.Frame(specific_frame, bg="lightblue",borderwidth=1, relief=tk.SUNKEN)
-        options_frame.grid(row=0, column=1, columnspan=1, sticky="ew")
         
-        color_frame = tk.Frame(options_frame, bg="lightblue",borderwidth=1, relief=tk.SUNKEN)
-        color_frame.grid(row=0,column=0)
-        _, col = ui.add_color(color_frame, self.data_options["common"]["color"], row=0, col=0, tooltip="Color")
-        _, col = ui.add_scale(color_frame, self.data_options["common"]["alpha"], from_ = 0, to = 1, resolution = 0.05, row=1, col=0, tooltip="Transparency")
-        _, col = ui.add_color(color_frame, self.data_options["plot"]["mfcolor"], row=0, col=1, tooltip="Marker Face Color")
-        _, col = ui.add_optionmenu(color_frame, self.data_options["plot"]["mfc"], YN, row=1, col=1, tooltip="Marker Face Color")
-        marker_frame = tk.Frame(options_frame, bg="lightblue",borderwidth=1, relief=tk.SUNKEN)
-        marker_frame.grid(row=0,column=1)
-        _, col = ui.add_optionmenu(marker_frame, self.data_options["plot"]["marker"], MARKER, row=0, col=0, tooltip="Marker")
-        _, col = ui.add_scale(marker_frame, self.data_options["plot"]["ms"], from_=0, to=10, resolution=0.1, row=1, col=0, tooltip="Marker size")
-        line_frame = tk.Frame(options_frame, bg="lightblue",borderwidth=1, relief=tk.SUNKEN)
-        line_frame.grid(row=0,column=2)
-        _, col = ui.add_optionmenu(line_frame, self.data_options["plot"]["line"], LINE, row=0, col=0, tooltip="Line")
-        _, col = ui.add_scale(line_frame, self.data_options["plot"]["lw"], from_=0, to=3, resolution=0.1, row=1, col=0, tooltip="Line width")
-        error_frame = tk.Frame(options_frame, bg="lightblue",borderwidth=1, relief=tk.SUNKEN)
-        error_frame.grid(row=2,column=0,columnspan=3)
+        options_frame = tk.Frame(specific_frame, bg=color, borderwidth=1, relief=tk.SUNKEN)
+        options_frame.grid(row=0, column=1, sticky="ew")
+        
+        color_frame = tk.Frame(options_frame, bg=color, borderwidth=1, relief=tk.SUNKEN)
+        color_frame.grid(row=0, column=0)
+        _, col = ui.add_color(color_frame, self.data_options["common"]["color"], row=0, col=0, tooltip="Colore principale della serie")
+        _, col = ui.add_scale(color_frame, self.data_options["common"]["alpha"], from_=0, to=1, resolution=0.05, row=1, col=0, tooltip="Trasparenza (0=invisibile, 1=opaco)", colorbg=color)
+        _, col = ui.add_color(color_frame, self.data_options["plot"]["mfcolor"], row=0, col=1, tooltip="Colore interno del Marker")
+        _, col = ui.add_optionmenu(color_frame, self.data_options["plot"]["mfc"], YN, row=1, col=1, tooltip="Attiva/Disattiva riempimento marker", colorbg=color)
+        
+        marker_frame = tk.Frame(options_frame, bg=color, borderwidth=1, relief=tk.SUNKEN)
+        marker_frame.grid(row=0, column=1)
+        _, col = ui.add_optionmenu(marker_frame, self.data_options["plot"]["marker"], MARKER, row=0, col=0, tooltip="Scegli lo stile del marker", colorbg=color)
+        _, col = ui.add_scale(marker_frame, self.data_options["plot"]["ms"], from_=0, to=10, resolution=0.1, row=1, col=0, tooltip="Dimensione del marker", colorbg=color)
+        
+        line_frame = tk.Frame(options_frame, bg=color, borderwidth=1, relief=tk.SUNKEN)
+        line_frame.grid(row=0, column=2)
+        _, col = ui.add_optionmenu(line_frame, self.data_options["plot"]["line"], LINE, row=0, col=0, tooltip="Stile della linea", colorbg=color)
+        _, col = ui.add_scale(line_frame, self.data_options["plot"]["lw"], from_=0, to=3, resolution=0.1, row=1, col=0, tooltip="Spessore della linea", colorbg=color)
+        
+        error_frame = tk.Frame(options_frame, bg=color, borderwidth=1, relief=tk.SUNKEN)
+        error_frame.grid(row=2, column=0, columnspan=3)
         row = 0; col = 0
-        _, col = ui.add_color(error_frame, self.data_options['plot']["errorbar"]["ecolor"], row=row, col=col, tooltip="Color Errorbar")
-        _, col = ui.add_scale(error_frame, self.data_options['plot']["errorbar"]["elinewidth"], from_=0, to=3, resolution=0.1, row=row, col=col, tooltip="Error line width")
-        _, col = ui.add_scale(error_frame, self.data_options['plot']["errorbar"]["capsize"], from_=0, to=10, resolution=0.5, row=row, col=col, tooltip="Cap size")
-        _, col = ui.add_scale(error_frame, self.data_options['plot']["errorbar"]["capthick"], from_=0, to=3, resolution=0.1, row=row, col=col, tooltip="Cap thick")
+        _, col = ui.add_color(error_frame, self.data_options['plot']["errorbar"]["ecolor"], row=row, col=col, tooltip="Colore delle barre d'errore")
+        _, col = ui.add_scale(error_frame, self.data_options['plot']["errorbar"]["elinewidth"], from_=0, to=3, resolution=0.1, row=row, col=col, tooltip="Spessore linea barre d'errore", colorbg=color)
+        _, col = ui.add_scale(error_frame, self.data_options['plot']["errorbar"]["capsize"], from_=0, to=10, resolution=0.5, row=row, col=col, tooltip="Dimensione dei terminali (cap)", colorbg=color)
+        _, col = ui.add_scale(error_frame, self.data_options['plot']["errorbar"]["capthick"], from_=0, to=3, resolution=0.1, row=row, col=col, tooltip="Spessore dei terminali (cap)", colorbg=color)
         
-        # Button to create and show regression frame
-        def toggle_regression():
-            if hasattr(self, "reg_frame") and self.reg_frame.winfo_exists():
-                self.reg_frame.destroy()
-                toggle_button.config(text="Esegui Fit")
-                self.data_options['plot']['fit']['plot_reg'].set("No")
-            else:
-                self.reg_frame = tk.Frame(specific_frame, bg="lightgreen",borderwidth=1, relief=tk.SUNKEN)
-                self.reg_frame.grid(row=2, column=0, columnspan=6, sticky="w")
-                RegressionApp(self.reg_frame, self.data_options, self.data_options["file path"])
-                toggle_button.config(text="Rimuovi fit")
+        filter_container = tk.Frame(specific_frame, bg="lightblue",borderwidth=1, relief=tk.SUNKEN)
+        filter_container.grid(row=0, column=2, sticky="ew")
+        filter_canvas = tk.Canvas(filter_container, bg="lightblue", height=dim.s(250), width=dim.s(480))
+        filter_canvas.grid(row=0, column=0, sticky="ew")
+        filter_scrollbar = tk.Scrollbar(filter_container, orient="horizontal", command=filter_canvas.xview)
+        filter_scrollbar.grid(row=1, column=0, sticky="ew")
+        filter_canvas.configure(xscrollcommand=filter_scrollbar.set)
+        
+        color = "lightblue"
+        # --- DEFINIZIONE TOOLTIP ---
+        tooltip_rules = (
+            "MODALITÀ STANDARD (Compare = None):\n"
+            "  5       (uguale a 5)\n"
+            "  >10     (maggiore di 10)\n"
+            "  <=5.5   (minore o uguale)\n"
+            "  !=0     (diverso da 0)\n"
+            "  >0,<10  (compreso tra 0 e 10)\n\n"
+            "MODALITÀ CONFRONTO (Compare selezionato):\n"
+            "  <, >, =      (Confronto diretto: x < y)\n"
+            "  x > y + 5    (Espressioni con x e y)\n"
+            "  x < np.log(y)(Funzioni NumPy)\n"
+            "  * x = colonna filtro, y = colonna compare"
+        )
+        filter_frame = tk.Frame(filter_canvas, bg=color)
+        filter_canvas.create_window((0, 0), window=filter_frame, anchor="nw")
+        def update_scrollregion(event):
+            filter_canvas.configure(scrollregion=filter_canvas.bbox("all"))
+        filter_frame.bind("<Configure>", update_scrollregion)
+        filter_container.grid_columnconfigure(0, weight=0)
+        row, col = 0, 0
+        _, col = ui.add_label_optionmenu(filter_frame, "Filtro 1)", self.data_options["common"]["col_filter1"], column + ["None"], row=row, col=col, tooltip="Seleziona una colonna da filtrare", colorbg=color)
+        _, col = ui.add_entry(filter_frame, self.data_options["common"]["filter1"], entry_width=8, row=row, col=col, tooltip=tooltip_rules)
+        _, col = ui.add_optionmenu(filter_frame, self.data_options["common"]["col_compare_filter1"], column + ["None"], row=row, col=col, tooltip="Seleziona una colonna da comparare,\n altrimenti lascia None", colorbg=color)
+        row += 1; col = 0
+        _, col = ui.add_label_optionmenu(filter_frame, "Filtro 2)", self.data_options["common"]["col_filter2"], column + ["None"], row=row, col=col, tooltip="Seleziona una colonna da filtrare", colorbg=color)
+        _, col = ui.add_entry(filter_frame, self.data_options["common"]["filter2"], entry_width=8, row=row, col=col, tooltip=tooltip_rules)
+        _, col = ui.add_optionmenu(filter_frame, self.data_options["common"]["col_compare_filter2"], column + ["None"], row=row, col=col, tooltip="Seleziona una colonna da comparare,\n altrimenti lascia None", colorbg=color)
+        row += 1; col = 0
+        _, col = ui.add_label_optionmenu(filter_frame, "Filtro 3)", self.data_options["common"]["col_filter3"], column + ["None"], row=row, col=col, tooltip="Seleziona una colonna da filtrare", colorbg=color)
+        _, col = ui.add_entry(filter_frame, self.data_options["common"]["filter3"], entry_width=8, row=row, col=col, tooltip=tooltip_rules)
+        _, col = ui.add_optionmenu(filter_frame, self.data_options["common"]["col_compare_filter3"], column + ["None"], row=row, col=col, tooltip="Seleziona una colonna da comparare,\n altrimenti lascia None", colorbg=color)
+        row += 1; col = 0
+        _, col = ui.add_label_optionmenu(filter_frame, "Filtro 4)", self.data_options["common"]["col_filter4"], column + ["None"], row=row, col=col, tooltip="Seleziona una colonna da filtrare", colorbg=color)
+        _, col = ui.add_entry(filter_frame, self.data_options["common"]["filter4"], entry_width=8, row=row, col=col, tooltip=tooltip_rules)
+        _, col = ui.add_optionmenu(filter_frame, self.data_options["common"]["col_compare_filter4"], column + ["None"], row=row, col=col, tooltip="Seleziona una colonna da comparare,\n altrimenti lascia None", colorbg=color)
+        
 
-        # Toggle button
-        toggle_button = tk.Button(specific_frame, text="Esegui Fit", command=toggle_regression)
-        toggle_button.grid(row=0, column=2, sticky="w", padx=5, pady=5)
 
     def hist_config(self,specific_frame,column):
-        
-        main_frame = tk.Frame(specific_frame, bg="lightblue",borderwidth=1, relief=tk.SUNKEN)
-        main_frame.grid(row=1,column=0,columnspan=4, sticky="w") 
-        row, col = 0, 0
-        _, col = ui.add_label_entry(main_frame, "Label:", self.data_options["common"]["label"], entry_width=80, row=row, col=col,tooltip="Label")
-        _, col = ui.add_label_optionmenu(main_frame, "X:", self.data_options["common"]["x"], column, row=row, col=col)
-        _, col = ui.add_label(main_frame, "X min-max:", row=row, col=col)
-        _, col = ui.add_entry(main_frame, self.data_options["common"]["x_min"], entry_width=8, row=row, col=col)
-        _, col = ui.add_label(main_frame, "-", row=row, col=col)
-        _, col = ui.add_entry(main_frame, self.data_options["common"]["x_max"], entry_width=8, row=row, col=col)
-        
-        function_frame = tk.Frame(specific_frame, bg="lightblue",borderwidth=1, relief=tk.SUNKEN)
-        function_frame.grid(row=2,column=0) 
-        row, col = 0, 0
-        _, col = ui.add_label_entry(function_frame, "Function:", self.data_options["common"]["function"], entry_width=40, entry_font=("Arial", 13), row=row, col=col, columnspan=7,tooltip="Function")
-        row += 1; col = 0
-        _, col = ui.add_entry(function_frame, self.data_options["hist"]["bottom"], row=row, col=col, tooltip= "Bottom")
-        _, col = ui.add_optionmenu(function_frame, self.data_options["hist"]["density"], TF, row=row, col=col, tooltip="Density")
-        _, col = ui.add_optionmenu(function_frame, self.data_options["hist"]["cumulative"], TF, row=row, col=col, tooltip="Cumulative")
-        
-        option_frame = tk.Frame(specific_frame, bg="lightblue",borderwidth=1, relief=tk.SUNKEN)
-        option_frame.grid(row=2,column=1)        
-        row = 0; col = 0
-        _, col = ui.add_entry(option_frame, self.data_options["hist"]["bins"], row=row, col=col, tooltip="Bins")
-        _, col = ui.add_optionmenu(option_frame, self.data_options["hist"]["align"], ALIGN, row=row, col=col, tooltip="Align")
-        row += 1; col = 0
-        _, col = ui.add_scale(option_frame, self.data_options["hist"]["rwidth"], from_=0, to=1, resolution=0.05, row=row, col=col, tooltip="Bin Width")
-        _, col = ui.add_optionmenu(option_frame, self.data_options["hist"]["orientation"], ORIENTATION, row=row, col=col, tooltip="Orientation")
-        
-        color_frame = tk.Frame(specific_frame, bg="lightblue",borderwidth=1, relief=tk.SUNKEN)
-        color_frame.grid(row=2,column=2)
-        ui.add_color(color_frame, self.data_options["common"]["color"], row=0, col=0, tooltip="Color")
-        ui.add_scale(color_frame, self.data_options["common"]["alpha"], from_=0, to=1, resolution=0.05, row=1, col=0, tooltip="Transparency")
-        
-        contour_frame = tk.Frame(specific_frame, bg="lightblue",borderwidth=1, relief=tk.SUNKEN)
-        contour_frame.grid(row=2,column=3)
-        ui.add_color(contour_frame, self.data_options["hist"]["contour_color"], row=0, col=0, tooltip="Contour color")
-        ui.add_scale(contour_frame, self.data_options["hist"]["contour_alpha"], from_=0, to=1, resolution=0.05, row=1, col=0, tooltip="Contour transparency")
-        ui.add_optionmenu(contour_frame, self.data_options["hist"]["contour_line"], LINE, row=0, col=1, tooltip="Contour line")
-        ui.add_scale(contour_frame, self.data_options["hist"]["contour_width"], from_=0, to=3, resolution=0.1, row=1, col=1, tooltip="Countour line width")
-        
+            colorbg = "lightgreen"
+
+            container = tk.Frame(specific_frame, bg=colorbg,borderwidth=1, relief=tk.SUNKEN)
+            container.grid(row=0, column=0, sticky="ew")
+            canvas = tk.Canvas(container, bg=colorbg, height=dim.s(200), width=dim.s(750))
+            canvas.grid(row=0, column=0, sticky="ew")
+            h_scrollbar = tk.Scrollbar(container, orient="horizontal", command=canvas.xview)
+            h_scrollbar.grid(row=1, column=0, sticky="ew")
+            canvas.configure(xscrollcommand=h_scrollbar.set)
+            
+            color = "lightgreen"
+            main_frame = tk.Frame(canvas, bg=color)
+            canvas.create_window((0, 0), window=main_frame, anchor="nw")
+            def update_scrollregion(event):
+                canvas.configure(scrollregion=canvas.bbox("all"))
+            main_frame.bind("<Configure>", update_scrollregion)
+            container.grid_columnconfigure(0, weight=1)
+            row, col = 0, 0
+            _, col = ui.add_label_entry(main_frame, "Label:", self.data_options["common"]["label"], entry_width=60, columnspan=8, row=row, col=col, tooltip="Etichetta per la legenda", colorbg=colorbg)
+            row += 1; col =0
+            _, col = ui.add_label_optionmenu(main_frame, "X:", self.data_options["common"]["x"], column, row=row, col=col, label_font=("Arial", 10, "bold"), tooltip="Seleziona la colonna dati principale (X)", colorbg=colorbg)
+            _, col = ui.add_label_optionmenu(main_frame, "X2:", self.data_options["common"]["x2"], column, row=row, col=col, tooltip="Seleziona una seconda colonna dati (opzionale)", colorbg=colorbg)
+            _, col = ui.add_label_entry(main_frame, "min-max:", self.data_options["common"]["x_min"], entry_width=8, row=row, col=col, tooltip="Valore minimo range X", colorbg=colorbg)
+            _, col = ui.add_label_entry(main_frame, "-", self.data_options["common"]["x_max"], entry_width=8, row=row, col=col, tooltip="Valore massimo range X", colorbg=colorbg)
+            row += 1; col = 0
+            _, col = ui.add_label_entry(main_frame, "Fun:", self.data_options["common"]["x_function"], entry_width=60, row=row, col=col, columnspan=8, tooltip="Funzione da applicare ai dati (es. np.log(x))", colorbg=colorbg)
+            row += 1; col = 0
+            _, col = ui.add_label_entry(main_frame, "Par:", self.data_options["common"]["x_parameters"], entry_width=60, row=row, col=col, columnspan=8, tooltip="Parametri aggiuntivi per la funzione", colorbg=colorbg)
+            
+            color_frame = tk.Frame(specific_frame, bg=colorbg,borderwidth=1, relief=tk.SUNKEN)
+            color_frame.grid(row=1,column=0)
+            ui.add_color(color_frame, self.data_options["common"]["color"], row=0, col=0, tooltip="Colore di riempimento istogramma")
+            ui.add_scale(color_frame, self.data_options["common"]["alpha"], from_=0, to=1, resolution=0.05, row=0, col=1, tooltip="Trasparenza riempimento", colorbg=colorbg)
+            contour_frame = tk.Frame(color_frame, bg=colorbg,borderwidth=1, relief=tk.SUNKEN)
+            contour_frame.grid(row=0,column=2)
+            ui.add_color(contour_frame, self.data_options["hist"]["contour_color"], row=0, col=0, tooltip="Colore del bordo (contour)")
+            ui.add_scale(contour_frame, self.data_options["hist"]["contour_alpha"], from_=0, to=1, resolution=0.05, row=0, col=1, tooltip="Trasparenza del bordo", colorbg=colorbg)
+            ui.add_optionmenu(contour_frame, self.data_options["hist"]["contour_line"], LINE, row=0, col=2, tooltip="Stile linea del bordo", colorbg=colorbg)
+            ui.add_scale(contour_frame, self.data_options["hist"]["contour_width"], from_=0, to=3, resolution=0.1, row=0, col=3, tooltip="Spessore linea del bordo", colorbg=colorbg)
+            
+            
+            option_frame = tk.Frame(specific_frame, bg=colorbg,borderwidth=1, relief=tk.SUNKEN)
+            option_frame.grid(row=0,column=1, rowspan=2, sticky="w")
+            row, col = 0, 0
+            _, col = ui.add_label_optionmenu(option_frame, "Type:", self.data_options["hist"]["histtype"], HISTTYPE, row=row, col=col, tooltip="Tipo di istogramma (bar, step, etc.)", colorbg=colorbg)
+            _, col = ui.add_label_entry(option_frame, "Bottom:", self.data_options["hist"]["bottom"], entry_width=8, row=row, col=col, tooltip="Valore di partenza asse Y (baseline)", colorbg=colorbg)
+            row += 1; col = 0
+            _, col = ui.add_label_entry(option_frame, "Bins:", self.data_options["hist"]["bins"], entry_width=8, row=row, col=col, tooltip="Numero di intervalli (bins)", colorbg=colorbg)
+            _, col = ui.add_label(option_frame, "width:", row=row, col=col, tooltip="Larghezza relativa barre", colorbg=colorbg)
+            _, col = ui.add_scale(option_frame, self.data_options["hist"]["rwidth"], from_=0, to=1, resolution=0.05, row=row, col=col, tooltip="Larghezza relativa barre (rwidth)", colorbg=colorbg)
+            row += 1; col = 0
+            _, col = ui.add_label_optionmenu(option_frame, "Align:", self.data_options["hist"]["align"], ALIGN, row=row, col=col, tooltip="Allineamento barre rispetto ai tick", colorbg=colorbg)
+            _, col = ui.add_label_optionmenu(option_frame, "Orientation:", self.data_options["hist"]["orientation"], ORIENTATION, row=row, col=col, tooltip="Orientamento (verticale/orizzontale)", colorbg=colorbg)
+            row += 1; col = 0
+            _, col = ui.add_label_optionmenu(option_frame, "Density:", self.data_options["hist"]["density"], TF, row=row, col=col, tooltip="Normalizza area a 1 (Densità)", colorbg=colorbg)
+            _, col = ui.add_label_optionmenu(option_frame, "Cumulative:", self.data_options["hist"]["cumulative"], TF, row=row, col=col, tooltip="Istogramma cumulativo", colorbg=colorbg)
+                    
+            
+            tick_frame = tk.Frame(specific_frame, bg=colorbg,borderwidth=1, relief=tk.SUNKEN)
+            tick_frame.grid(row=0,column=2, rowspan=2, sticky="w")
+            row, col = 0, 0
+            _, col = ui.add_label_optionmenu(tick_frame, "Axis:", self.data_options["hist"]["tick_par"]["axis"], AXIS, row=row, col=col,colspan=4, tooltip="Applica tick all'asse X, Y o entrambi", colorbg=colorbg)
+            row += 1; col = 0
+            _, col = ui.add_label_optionmenu(tick_frame, "Direction:", self.data_options["hist"]["tick_par"]["direction"], ['inout', 'out', 'in'],row=row, col=col,colspan=4, tooltip="Direzione dei tick (interno/esterno)", colorbg=colorbg)
+            row += 1; col = 0
+            _, col = ui.add_color(tick_frame, self.data_options["hist"]["tick_par"]["labelcolor"], row=row, col=col, tooltip="Colore delle etichette (numeri)")
+            _, col = ui.add_label_entry(tick_frame, "Length:", self.data_options["hist"]["tick_par"]["length"], entry_width=6, row=row, col=col, tooltip="Lunghezza delle stanghette tick", colorbg=colorbg)
+            row += 1; col = 0
+            _, col = ui.add_color(tick_frame, self.data_options["hist"]["tick_par"]["color"], row=row, col=col, tooltip="Colore delle stanghette tick")
+            _, col = ui.add_label_entry(tick_frame, "Width:", self.data_options["hist"]["tick_par"]["width"], entry_width=6, row=row, col=col, tooltip="Spessore delle stanghette tick", colorbg=colorbg)
+            row += 1; col = 0
+            _, col = ui.add_label_entry(tick_frame, "Size/Pad:", self.data_options["hist"]["tick_par"]["labelsize"], entry_width=4, row=row, col=col, tooltip="Dimensione font etichette", colorbg=colorbg)
+            _, col = ui.add_entry(tick_frame, self.data_options["hist"]["tick_par"]["pad"], entry_width=4, row=row, col=col, tooltip="Distanza etichetta dall'asse (pad)")
+            
+            filter_container = tk.Frame(specific_frame, bg=colorbg,borderwidth=1, relief=tk.SUNKEN)
+            filter_container.grid(row=0, column=3, rowspan=2, sticky="ew")
+            filter_canvas = tk.Canvas(filter_container, bg=colorbg, height=dim.s(250), width=dim.s(480))
+            filter_canvas.grid(row=0, column=0, sticky="ew")
+            filter_scrollbar = tk.Scrollbar(filter_container, orient="horizontal", command=filter_canvas.xview)
+            filter_scrollbar.grid(row=1, column=0, sticky="ew")
+            filter_canvas.configure(xscrollcommand=filter_scrollbar.set)
+            
+            color = "lightgreen"
+            # --- DEFINIZIONE TOOLTIP ---
+            tooltip_rules = (
+                "MODALITÀ STANDARD (Compare = None):\n"
+                "  5       (uguale a 5)\n"
+                "  >10     (maggiore di 10)\n"
+                "  <=5.5   (minore o uguale)\n"
+                "  !=0     (diverso da 0)\n"
+                "  >0,<10  (compreso tra 0 e 10)\n\n"
+                "MODALITÀ CONFRONTO (Compare selezionato):\n"
+                "  <, >, =      (Confronto diretto: x < y)\n"
+                "  x > y + 5    (Espressioni con x e y)\n"
+                "  x < np.log(y)(Funzioni NumPy)\n"
+                "  * x = colonna filtro, y = colonna compare"
+            )
+            filter_frame = tk.Frame(filter_canvas, bg=color)
+            filter_canvas.create_window((0, 0), window=filter_frame, anchor="nw")
+            def update_scrollregion(event):
+                filter_canvas.configure(scrollregion=filter_canvas.bbox("all"))
+            filter_frame.bind("<Configure>", update_scrollregion)
+            filter_container.grid_columnconfigure(0, weight=0)
+            row, col = 0, 0
+            _, col = ui.add_label_optionmenu(filter_frame, "Filtro 1)", self.data_options["common"]["col_filter1"], column + ["None"], row=row, col=col, tooltip="Seleziona una colonna da filtrare", colorbg=color)
+            _, col = ui.add_entry(filter_frame, self.data_options["common"]["filter1"], entry_width=8, row=row, col=col, tooltip=tooltip_rules)
+            _, col = ui.add_optionmenu(filter_frame, self.data_options["common"]["col_compare_filter1"], column + ["None"], row=row, col=col, tooltip="Colonna di confronto (y) per il filtro", colorbg=color)
+            row += 1; col = 0
+            _, col = ui.add_label_optionmenu(filter_frame, "Filtro 2)", self.data_options["common"]["col_filter2"], column + ["None"], row=row, col=col, tooltip="Seleziona una colonna da filtrare", colorbg=color)
+            _, col = ui.add_entry(filter_frame, self.data_options["common"]["filter2"], entry_width=8, row=row, col=col, tooltip=tooltip_rules)
+            _, col = ui.add_optionmenu(filter_frame, self.data_options["common"]["col_compare_filter2"], column + ["None"], row=row, col=col, tooltip="Colonna di confronto (y) per il filtro", colorbg=color)
+            row += 1; col = 0
+            _, col = ui.add_label_optionmenu(filter_frame, "Filtro 3)", self.data_options["common"]["col_filter3"], column + ["None"], row=row, col=col, tooltip="Seleziona una colonna da filtrare", colorbg=color)
+            _, col = ui.add_entry(filter_frame, self.data_options["common"]["filter3"], entry_width=8, row=row, col=col, tooltip=tooltip_rules)
+            _, col = ui.add_optionmenu(filter_frame, self.data_options["common"]["col_compare_filter3"], column + ["None"], row=row, col=col, tooltip="Colonna di confronto (y) per il filtro", colorbg=color)
+            row += 1; col = 0
+            _, col = ui.add_label_optionmenu(filter_frame, "Filtro 4)", self.data_options["common"]["col_filter4"], column + ["None"], row=row, col=col, tooltip="Seleziona una colonna da filtrare", colorbg=color)
+            _, col = ui.add_entry(filter_frame, self.data_options["common"]["filter4"], entry_width=8, row=row, col=col, tooltip=tooltip_rules)
+            _, col = ui.add_optionmenu(filter_frame, self.data_options["common"]["col_compare_filter4"], column + ["None"], row=row, col=col, tooltip="Colonna di confronto (y) per il filtro", colorbg=color)
         
     def toggle_frame(self, specific_frame):
         if self.expanded:
@@ -413,18 +577,65 @@ class InsertFunction:
         
         # Options dictionary
         self.function_options = {
-            "function": tk.StringVar(value=""),
-            "parameters": tk.StringVar(value=""),
             "inset": inset_counter,
-            "x min": tk.StringVar(value=""),
-            "x max": tk.StringVar(value=""),
-            "label": tk.StringVar(),
-            "marker": tk.StringVar(value="None"),
-            "ms": tk.StringVar(value="5"),
-            "line": tk.StringVar(value="solid"),
-            "lw": tk.StringVar(value="1"),
-            "color": tk.StringVar(value=COLOR[0]),
-            "alpha": tk.StringVar(value="1"),
+            "function_select": tk.StringVar(value="function"),
+            "show/hide": tk.StringVar(value="1"),
+            "function" : {
+                "function": tk.StringVar(value=""),
+                "parameters": tk.StringVar(value=""),
+                "x min": tk.StringVar(value=""),
+                "x max": tk.StringVar(value=""),
+                "label": tk.StringVar(),
+                "line": tk.StringVar(value="solid"),
+                "lw": tk.StringVar(value="1"),
+                "color": tk.StringVar(value="black"),
+                "alpha": tk.StringVar(value="1")
+            },
+            "axhline" : {
+                "y": tk.StringVar(value=""),
+                "label": tk.StringVar(),
+                "line": tk.StringVar(value="solid"),
+                "lw": tk.StringVar(value="1"),
+                "color": tk.StringVar(value="black"),
+                "alpha": tk.StringVar(value="1")
+            },
+            "axvline" : {
+                "x": tk.StringVar(value=""),
+                "label": tk.StringVar(),
+                "line": tk.StringVar(value="solid"),
+                "lw": tk.StringVar(value="1"),
+                "color": tk.StringVar(value="black"),
+                "alpha": tk.StringVar(value="1")
+            },
+            "axhspan": {
+                "y1": tk.StringVar(value=""),
+                "y2": tk.StringVar(value=""),
+                "label": tk.StringVar(value=""),
+                "facecolor": tk.StringVar(value=COLOR[0]),
+                "edgecolor": tk.StringVar(value=COLOR[0]),
+                "alpha": tk.StringVar(value="1")
+            },
+            "axvspan": {
+                "x1": tk.StringVar(value=""),
+                "x2": tk.StringVar(value=""),
+                "label": tk.StringVar(value=""),
+                "facecolor": tk.StringVar(value=COLOR[0]),
+                "edgecolor": tk.StringVar(value=COLOR[0]),
+                "alpha": tk.StringVar(value="1")
+            },
+            # Rettangolo (patch Rectangle)
+            "patch": {
+                "x1": tk.StringVar(value=""),
+                "x2": tk.StringVar(value=""),
+                "y1": tk.StringVar(value=""),
+                "y2": tk.StringVar(value=""),
+                "label": tk.StringVar(value=""),
+                "line": tk.StringVar(value="solid"),   # linestyle (stroke style)
+                "lw": tk.StringVar(value="1"),         # linewidth
+                "facecolor": tk.StringVar(value=COLOR[0]), # used for BOTH edge and face
+                "edgecolor": tk.StringVar(value=COLOR[0]), # used for BOTH edge and face
+                "alpha": tk.StringVar(value="1")       # transparency
+            }
         }
     
         self.options(function_options, function_id, all_function_id)
@@ -432,7 +643,8 @@ class InsertFunction:
 
     def options(self,function_options, function_id, all_function_id):
         # Main frame
-        frame = tk.Frame(self.root, relief=tk.SUNKEN, borderwidth=1)
+        color = "lightgreen"
+        frame = tk.Frame(self.root, bg=color, relief=tk.SUNKEN, borderwidth=1)
         frame.pack(padx=dim.s(5), pady=dim.s(5), fill=tk.X)
        
         if self.upload:
@@ -445,28 +657,195 @@ class InsertFunction:
         if not hasattr(self, 'trash_icons'):
             self.trash_icons = []
         self.trash_icons.append(trash_icon)
+        ui.add_checkbutton(frame, "Show function", self.function_options["show/hide"], row=0, col=2, label_font=dim.label_font(14), tooltip="Mostra/Nascondi funzione", colorbg="lightgreen")
+        ui.add_label_optionmenu(frame, "Mode:", self.function_options["function_select"], FUNCTION, row=0, col=3, colorbg=color)
+
+        # Arrow button (if you use it)
+                # Variable for expansion state
+        self.expanded = True  
+
+        # Arrow button (initially "▼")
+        self.toggle_button = tk.Button(
+            frame, text="▼", width=2, command=lambda: self.toggle_frame(specific_frame)
+        )
+        self.toggle_button.grid(row=0, column=5, padx=dim.s(5), pady=dim.s(5), sticky="e")
+
+
+        # ⬅️ GIVE WEIGHT TO COLUMN 1 (the one with the label)
+        frame.grid_columnconfigure(0, weight=0)
+        frame.grid_columnconfigure(1, weight=1)  # expands to fill
+        frame.grid_columnconfigure(2, weight=0)
+        frame.grid_columnconfigure(3, weight=0)
+
+        # --- Frame for specific options: takes full width
+        specific_frame = tk.Frame(frame, bg=color)
+        specific_frame.grid(row=1, column=0, columnspan=6, sticky="ew")
+        specific_frame.grid_columnconfigure(0, weight=1)  # to stretch internally, if necessary
+
+    
+        # Function to update specific options
+        def refresh_options(*args):
+            # Clear previous specific widgets
+            for widget in specific_frame.grid_slaves():
+                widget.destroy()
+
+            mode = self.function_options["function_select"].get()
+
+            if mode == "function":
+                self.function_config(specific_frame)
+            if mode == "h-line":
+                self.axhline_config(specific_frame)
+            if mode == "v-line":
+                self.axvline_config(specific_frame)
+            if mode == "h-span":
+                self.axhspan_config(specific_frame)
+            if mode == "v-span":
+                self.axvspan_config(specific_frame)
+            if mode == "patch":
+                self.patch_config(specific_frame)
+        self.function_options["function_select"].trace_add("write", refresh_options)
+
+        refresh_options()
         
-        func_frame = tk.Frame(frame, relief=tk.SUNKEN, borderwidth=1)
+    def function_config(self, frame):        
+        color = "lightgreen"
+        func_frame = tk.Frame(frame, bg=color, relief=tk.SUNKEN, borderwidth=1)
         func_frame.grid(row = 0, column = 1, padx=dim.s(5), pady=dim.s(5))
-        _, col = ui.add_label_entry(func_frame, "Function:", self.function_options["function"], entry_width=45, entry_font=("Arial", 13), row=0, col=0, columnspan=5)
-        _, col = ui.add_label_entry(func_frame, "Parameters:", self.function_options["parameters"], entry_width=90, row=1, col=0, columnspan=5, tooltip="Parameters: inserire\n parametri nel formato\npar1=value1,par2=value2,...")
-        row = 2; col = 0
-        _, col = ui.add_label_entry(func_frame, "Label:", self.function_options["label"], entry_width=50, row=row, col=0)
-        _, col = ui.add_label(func_frame, "X min-max",row=row, col=col)
-        _, col = ui.add_entry(func_frame, self.function_options["x min"], entry_width=8, row=row, col=col)
-        _, col = ui.add_label(func_frame, "-",row=row, col=col)
-        _, col = ui.add_entry(func_frame, self.function_options["x max"], entry_width=8, row=row, col=col)
         
-        opt_frame = tk.Frame(frame, relief=tk.SUNKEN, borderwidth=1)
+        fun_opt = self.function_options["function"]
+        
+        col = 0
+        row = 0
+        
+        _, col = ui.add_label_entry(func_frame, "Function:", fun_opt["function"], entry_width=45, entry_font=("Arial", 13), row=0, col=0, columnspan=5, colorbg=color)
+        _, col = ui.add_label_entry(func_frame, "Parameters:", fun_opt["parameters"], entry_width=90, row=1, col=0, columnspan=5, tooltip="Parameters: inserire\n parametri nel formato\npar1=value1,par2=value2,...", colorbg=color)
+        row = 2; col = 0
+        _, col = ui.add_label_entry(func_frame, "Label:", fun_opt["label"], entry_width=50, row=row, col=0, colorbg=color)
+        _, col = ui.add_label(func_frame, "X min-max",row=row, col=col, colorbg=color)
+        _, col = ui.add_entry(func_frame, fun_opt["x min"], entry_width=8, row=row, col=col)
+        _, col = ui.add_label(func_frame, "-",row=row, col=col, colorbg=color)
+        _, col = ui.add_entry(func_frame, fun_opt["x max"], entry_width=8, row=row, col=col)
+
+        opt_frame = tk.Frame(frame, bg=color, relief=tk.SUNKEN, borderwidth=1)
         opt_frame.grid(row = 0, column = 2, padx=dim.s(5), pady=dim.s(5))
         row = 0; col = 0
-        _, col = ui.add_color(opt_frame, self.function_options["color"], row=row, col=col, tooltip="Color")
-        _, col = ui.add_scale(opt_frame, self.function_options["alpha"], from_ = 0, to = 1, resolution = 0.05, row=row, col=col, tooltip="Transparency")
+        _, col = ui.add_color(opt_frame, fun_opt["color"], row=row, col=col, tooltip="Color")
+        _, col = ui.add_scale(opt_frame, fun_opt["alpha"], from_ = 0, to = 1, resolution = 0.05, row=row, col=col, tooltip="Transparency", colorbg=color)
         row += 1; col = 0
-        _, col = ui.add_optionmenu(opt_frame, self.function_options["line"], LINE, row=row, col=col, tooltip="Line")
-        _, col = ui.add_scale(opt_frame, self.function_options["lw"], from_ = 0, to = 3, resolution = 0.1, row=row, col=col, tooltip="Line Width")
+        _, col = ui.add_optionmenu(opt_frame, fun_opt["line"], LINE, row=row, col=col, tooltip="Line", colorbg=color)
+        _, col = ui.add_scale(opt_frame, fun_opt["lw"], from_ = 0, to = 3, resolution = 0.1, row=row, col=col, tooltip="Line Width", colorbg=color)
+
+    def axhline_config(self, frame):
+        color = "lightgreen"        
+        frame = tk.Frame(frame, bg=color, relief=tk.SUNKEN, borderwidth=1)
+        frame.grid(row = 0, column = 1, padx=dim.s(5), pady=dim.s(5))
+        
+        opt = self.function_options["axhline"]
+        
+        col = 0
+        row = 0
+        
+        _, col = ui.add_label_entry(frame, "Label:", opt["label"], entry_width=45, row=row, col=col, colorbg=color)
+        _, col = ui.add_label_entry(frame, "y:", opt["y"], entry_width=10, row=row, col=col, colorbg=color)
+        
+        _, col = ui.add_optionmenu(frame, opt["line"], LINE, row=row, col=col, tooltip="Line", colorbg=color)
+        _, col = ui.add_scale(frame, opt["lw"], from_ = 0, to = 3, resolution = 0.1, row=row, col=col, tooltip="Line Width", colorbg=color)
+
+        _, col = ui.add_color(frame, opt["color"], row=row, col=col, tooltip="Color")
+        _, col = ui.add_scale(frame, opt["alpha"], from_ = 0, to = 1, resolution = 0.05, row=row, col=col, tooltip="Transparency", colorbg=color)
+        
+    def axvline_config(self, frame):
+        color = "lightgreen"
+        frame = tk.Frame(frame, bg=color, relief=tk.SUNKEN, borderwidth=1)
+        frame.grid(row = 0, column = 1, padx=dim.s(5), pady=dim.s(5))
+        
+        opt = self.function_options["axvline"]
+        
+        col = 0
+        row = 0
+        
+        _, col = ui.add_label_entry(frame, "Label:", opt["label"], entry_width=45, row=row, col=col, colorbg=color)
+        _, col = ui.add_label_entry(frame, "x:", opt["x"], entry_width=10, row=row, col=col, colorbg=color)
+        
+        _, col = ui.add_optionmenu(frame, opt["line"], LINE, row=row, col=col, tooltip="Line", colorbg=color)
+        _, col = ui.add_scale(frame, opt["lw"], from_ = 0, to = 3, resolution = 0.1, row=row, col=col, tooltip="Line Width", colorbg=color)
+
+        _, col = ui.add_color(frame, opt["color"], row=row, col=col, tooltip="Color")
+        _, col = ui.add_scale(frame, opt["alpha"], from_ = 0, to = 1, resolution = 0.05, row=row, col=col, tooltip="Transparency", colorbg=color)
         
         
+    def axhspan_config(self, frame):        
+        color = "lightgreen"
+        frame = tk.Frame(frame, bg=color, relief=tk.SUNKEN, borderwidth=1)
+        frame.grid(row = 0, column = 1, padx=dim.s(5), pady=dim.s(5))
+        
+        opt = self.function_options["axhspan"]
+        
+        col = 0
+        row = 0
+        
+        _, col = ui.add_label_entry(frame, "Label:", opt["label"], entry_width=45, row=row, col=col, colorbg=color)
+        _, col = ui.add_label_entry(frame, "y:", opt["y1"], entry_width=10, row=row, col=col, colorbg=color)
+        _, col = ui.add_label_entry(frame, "-", opt["y2"], entry_width=10, row=row, col=col, colorbg=color)
+        
+        _, col = ui.add_color(frame, opt["facecolor"], row=row, col=col, tooltip="Color")
+        _, col = ui.add_color(frame, opt["edgecolor"], row=row, col=col, tooltip="Color")
+        _, col = ui.add_scale(frame, opt["alpha"], from_ = 0, to = 1, resolution = 0.05, row=row, col=col, tooltip="Transparency", colorbg=color)
+    
+    def axvspan_config(self, frame):        
+        color = "lightgreen"
+        frame = tk.Frame(frame, bg=color, relief=tk.SUNKEN, borderwidth=1)
+        frame.grid(row = 0, column = 1, padx=dim.s(5), pady=dim.s(5))
+        
+        opt = self.function_options["axvspan"]
+        
+        col = 0
+        row = 0
+        
+        _, col = ui.add_label_entry(frame, "Label:", opt["label"], entry_width=45, row=row, col=col, colorbg=color)
+        _, col = ui.add_label_entry(frame, "x:", opt["x1"], entry_width=10, row=row, col=col, colorbg=color)
+        _, col = ui.add_label_entry(frame, "-", opt["x2"], entry_width=10, row=row, col=col, colorbg=color)
+        
+        _, col = ui.add_color(frame, opt["facecolor"], row=row, col=col, tooltip="Color")
+        _, col = ui.add_color(frame, opt["edgecolor"], row=row, col=col, tooltip="Color")
+        _, col = ui.add_scale(frame, opt["alpha"], from_ = 0, to = 1, resolution = 0.05, row=row, col=col, tooltip="Transparency", colorbg=color)
+        
+    def patch_config(self, frame):     
+        color = "lightgreen"   
+        frame = tk.Frame(frame, bg=color, relief=tk.SUNKEN, borderwidth=1)
+        frame.grid(row = 0, column = 1, padx=dim.s(5), pady=dim.s(5))
+        
+        opt = self.function_options["patch"]
+        
+        col = 0
+        row = 0
+        
+        _, col = ui.add_label_entry(frame, "Label:", opt["label"], entry_width=50, row=row, col=col, columnspan=7, colorbg=color)
+        col += 7
+        _, col = ui.add_optionmenu(frame, opt["line"], LINE, row=row, col=col, tooltip="Line", colorbg=color)
+        _, col = ui.add_scale(frame, opt["lw"], from_ = 0, to = 3, resolution = 0.1, row=row, col=col, tooltip="Line Width", colorbg=color)
+
+        col = 0
+        row = 1
+        _, col = ui.add_label_entry(frame, "x:", opt["x1"], entry_width=10, row=row, col=col, colorbg=color)
+        _, col = ui.add_label_entry(frame, "-", opt["x2"], entry_width=10, row=row, col=col, colorbg=color)
+        _, col = ui.add_label_entry(frame, "y:", opt["y1"], entry_width=10, row=row, col=col, colorbg=color)
+        _, col = ui.add_label_entry(frame, "-", opt["y2"], entry_width=10, row=row, col=col, colorbg=color)
+        _, col = ui.add_color(frame, opt["facecolor"], row=row, col=col, tooltip="Face color")
+        _, col = ui.add_color(frame, opt["edgecolor"], row=row, col=col, tooltip="Edge color")
+        _, col = ui.add_scale(frame, opt["alpha"], from_ = 0, to = 1, resolution = 0.05, row=row, col=col, tooltip="Transparency", colorbg=color)
+        
+    def toggle_frame(self, specific_frame):
+        if self.expanded:
+            # Compress (hide specific_frame)
+            specific_frame.grid_remove()
+            self.toggle_button.config(text="▶")  # right arrow
+        else:
+            # Expand (show specific_frame)
+            specific_frame.grid()
+            self.toggle_button.config(text="▼")  # down arrow
+        self.expanded = not self.expanded
+
     def remove_function(self, frame, function_id, all_function_id, function_options):
         if function_options.get("function_id") == function_id:
             function_options = None  
@@ -475,7 +854,7 @@ class InsertFunction:
             all_function_id.remove(function_id)
         if hasattr(self.root, "update_idletasks"):
             self.root.update_idletasks()
-
+            
 class InsetOptions:
     def __init__(self, root, inset_counter,inset_id,inset_options,all_inset_id,MainPage, upload=False):
         self.root = root
@@ -486,22 +865,33 @@ class InsetOptions:
         self.inset_opt = {
             'inset': inset_counter,
             'inset_id': inset_id,
-            'common': {
-                'x_dim': tk.StringVar(value=8), 
-                'y_dim': tk.StringVar(value=6), 
-                'title': tk.StringVar(value=None),
-                'x_label': tk.StringVar(value=None), 
-                'y_label': tk.StringVar(value=None),
-                'x_min': tk.StringVar(value=None), 
-                'x_max': tk.StringVar(value=None),
-                'y_min': tk.StringVar(value=None), 
-                'y_max': tk.StringVar(value=None),
-                'log': tk.StringVar(value="None"),
+            "show/hide": tk.StringVar(value="1"),
+            'title': tk.StringVar(value=None),
+            'x_label': tk.StringVar(value=None), 
+            'y_label': tk.StringVar(value=None),
+            'x_dim': tk.StringVar(value=8), 
+            'y_dim': tk.StringVar(value=6), 
+            'x_min': tk.StringVar(value=None), 
+            'x_max': tk.StringVar(value=None),
+            'y_min': tk.StringVar(value=None), 
+            'y_max': tk.StringVar(value=None),
+            'log': tk.StringVar(value="None"),
+            'x_thick': tk.StringVar(value=None),
+            'y_thick': tk.StringVar(value=None),
+            'def_color': tk.StringVar(value="None"),
+            'def_alpha': tk.StringVar(value=""),
+            'facecolor': tk.StringVar(value="None"),
+            'alpha_face': tk.StringVar(value="1"),
+            'spines': {
+                'left': tk.StringVar(value="1"),
+                'top': tk.StringVar(value="1"),
+                'right': tk.StringVar(value="1"),
+                'bottom': tk.StringVar(value="1"),
             },
             'grid': {
                 'style': tk.StringVar(value='None'),
                 'lw': tk.StringVar(value=0.5),
-                'color': tk.StringVar(value=COLOR[0]),
+                'color': tk.StringVar(value=COLOR[5]),
                 'alpha': tk.StringVar(value=0.5),
                 'axis': tk.StringVar(value='both'),
             },
@@ -518,8 +908,7 @@ class InsetOptions:
             },
             'font': {
                 "title_size": tk.StringVar(value="10"),         # Title size
-                "xlabel_size": tk.StringVar(value="10"),        # X axis label size
-                "ylabel_size": tk.StringVar(value="10"),        # Y axis label size
+                "label_size": tk.StringVar(value="10"),        # X axis label size
                 "xaxis_size": tk.StringVar(value="10"),        # X axis tick label size
                 "yaxis_size": tk.StringVar(value="10"),        # Y axis tick label size
                 "color": tk.StringVar(value=COLOR[5])            # Text color
@@ -547,81 +936,105 @@ class InsetOptions:
             self.trash_icons = []
         self.trash_icons.append(trash_icon)
         
+        color = "lightblue"
         main_frame = tk.Frame(self.frame, bg="lightblue",borderwidth=1, relief=tk.SUNKEN)
         main_frame.grid(row=0,column=1)
+
+        axis_frame = tk.Frame(main_frame, bg="lightblue",borderwidth=1, relief=tk.SUNKEN)
+        axis_frame.grid(row=0,column=0,columnspan=2)
         row = 0; col = 0
-        _, col = ui.add_label_entry(main_frame, "Title:", self.inset_opt['common']['title'], entry_width= 50, row=row, col=col, columnspan=5)
+        _, col = ui.add_label_entry(axis_frame, "Title:", self.inset_opt['title'], entry_width= 80, row=row, col=col, columnspan=7, colorbg=color)
+        col += 6
+        _, col = ui.add_label_optionmenu(axis_frame, "Log:", self.inset_opt['log'], LOG, row=row, col=col, colorbg=color)
         row += 1; col = 0
-        _, col = ui.add_label(main_frame, "X/Y dim:", row=row, col=col)
-        _, col = ui.add_entry(main_frame, self.inset_opt['common']['x_dim'], entry_width=8, row=row, col=col)
-        _, col = ui.add_label(main_frame, "-", row=row, col=col)
-        _, col = ui.add_entry(main_frame, self.inset_opt['common']['y_dim'], entry_width=8, row=row, col=col)
-        _, col = ui.add_label_optionmenu(main_frame, "Log:", self.inset_opt['common']['log'], LOG, row=row, col=col)
+        _, col = ui.add_label_entry(axis_frame, 'X label', self.inset_opt['x_label'], entry_width=40, row=row, col=col, columnspan=3, colorbg=color)
+        col += 2
+        _, col = ui.add_label_entry(axis_frame, 'X min/max', self.inset_opt['x_min'], entry_width=10, row=row, col=col, colorbg=color)
+        _, col = ui.add_label_entry(axis_frame, '-', self.inset_opt['x_max'], entry_width=10, row=row, col=col, colorbg=color)
+        _, col = ui.add_label_entry(axis_frame, 'x thick', self.inset_opt['x_thick'], entry_width=8, row=row, col=col, colorbg=color)
         row += 1; col = 0
-        _, col = ui.add_label_entry(main_frame, 'X label', self.inset_opt['common']['x_label'], entry_width=20, row=row, col=col, columnspan=3)
-        _, col = ui.add_label_entry(main_frame, 'Y label', self.inset_opt['common']['y_label'], entry_width=20, row=row, col=col+2)
+        _, col = ui.add_label_entry(axis_frame, 'Y label', self.inset_opt['y_label'], entry_width=40, row=row, col=col, colorbg=color)
+        col += 2
+        _, col = ui.add_label_entry(axis_frame, 'Y min/max', self.inset_opt['y_min'], entry_width=10, row=row, col=col, colorbg=color)
+        _, col = ui.add_label_entry(axis_frame, '-', self.inset_opt['y_max'], entry_width=10, row=row, col=col, colorbg=color)
+        _, col = ui.add_label_entry(axis_frame, 'y thick', self.inset_opt['y_thick'], entry_width=8, row=row, col=col, colorbg=color)
         
-        
-        position_frame = tk.Frame(self.frame,borderwidth=1, relief=tk.SUNKEN)
-        position_frame.grid(row=0,column=2)
-        row += 1; col = 0
-        ui.add_label(position_frame, "Position:", row=0, col=0, colspan=3)
-        row += 1; col = 0
-        _, col = ui.add_label_entry(position_frame, "x:", self.inset_opt['position']['left'], entry_width=6, row=row, col=col, tooltip="Top")
-        _, col = ui.add_label_entry(position_frame, "y:", self.inset_opt['position']['bottom'], entry_width=6, row=row, col=col, tooltip="Top")
-        ui.add_label(position_frame, "Dimension:", row=2, col=0, colspan=3)
-        row = 1; col = 0
-        _, col = ui.add_label_entry(position_frame, "↕", self.inset_opt['position']['height'], entry_width=6, row=row, col=col, tooltip="Top")
-        _, col = ui.add_label_entry(position_frame, "⟷", self.inset_opt['position']['width'], entry_width=6, row=row, col=col, tooltip="Top")
-
-        grid_frame = tk.Frame(self.frame,borderwidth=1, relief=tk.SUNKEN)
-        grid_frame.grid(row=0,column=3)
-        grid_frame1 = tk.Frame(grid_frame)
-        grid_frame1.grid(row=0,column=0)
+        font_frame = tk.Frame(main_frame,borderwidth=1, relief=tk.SUNKEN)
+        font_frame.grid(row=1,column=0)
         row = 0; col = 0
-        _, col = ui.add_optionmenu(grid_frame1, self.inset_opt['grid']['style'], LINE, row=row, col=col, tooltip="Grid style")
-        _, col = ui.add_optionmenu(grid_frame1, self.inset_opt["grid"]["axis"], AXIS, row=row, col=col, tooltip="Axis")
-        _, col = ui.add_color(grid_frame1, self.inset_opt["grid"]["color"], row=row, col=col, tooltip="Color")
-        grid_frame2 = tk.Frame(grid_frame)
-        grid_frame2.grid(row=1,column=0)
-        row = 0; col = 0
-        _, col = ui.add_scale(grid_frame2, self.inset_opt["grid"]["alpha"], from_ = 0, to = 1, resolution = 0.05, row=row, col=col, tooltip="Transparency", lenght=80)
-        _, col = ui.add_scale(grid_frame2, self.inset_opt["grid"]['lw'], from_=0, to=3, resolution=0.1, row=row, col=col, tooltip="Grid line width", lenght=80)
-
-        sci_frame = tk.Frame(self.frame,borderwidth=1, relief=tk.SUNKEN)
-        sci_frame.grid(row=0,column=4)
-        row = 0; col = 0
-        _, col = ui.add_optionmenu(sci_frame, self.inset_opt['sci']['style'], ['plain', 'sci'], row=row, col=col, tooltip="Sci style")
-        row += 1; col = 0
-        _, col = ui.add_optionmenu(sci_frame, self.inset_opt["sci"]["axis"], AXIS, row=row, col=col, tooltip="Sci axis")
-        row += 1; col = 0
-        sci_frame1 = tk.Frame(sci_frame)
-        sci_frame1.grid(row=2,column=0)
-        row = 0; col = 0        
-        _, col = ui.add_entry(sci_frame1, self.inset_opt["sci"]["min_scilimits"], entry_width=5 , row=row, col=col, tooltip="Sci limits")
-        _, col = ui.add_label_entry(sci_frame1, "-", self.inset_opt["sci"]["max_scilimits"], entry_width=5 , row=row, col=col, tooltip="Sci limits")
-
-        legend_frame = tk.Frame(self.frame,borderwidth=1, relief=tk.SUNKEN)
-        legend_frame.grid(row=0,column=5)
-        row = 0; col = 0
-        _, col = ui.add_optionmenu(legend_frame, self.inset_opt['legend']['legend'], YN, row=row, col=col, tooltip="Show legend")
-        row += 1; col = 0
-        _, col = ui.add_entry(legend_frame, self.inset_opt['legend']['legend_size'], entry_width=6, row=row, col=col, tooltip="Size")
-        row += 1; col = 0
-        _, col = ui.add_optionmenu(legend_frame, self.inset_opt['legend']['legend_position'], LEGEND, row=row, col=col, tooltip="Position")
-
-        font_frame = tk.Frame(self.frame,borderwidth=1, relief=tk.SUNKEN)
-        font_frame.grid(row=0,column=6)
-        row = 0; col = 0
-        _, col = ui.add_label_entry(font_frame, "Title:", self.inset_opt['font']['title_size'], entry_width=6, row=row, col=col, tooltip="Top")
+        _, col = ui.add_label_entry(font_frame, "Title:", self.inset_opt['font']['title_size'], entry_width=4, row=row, col=col, tooltip="Title size")
         _,col = ui.add_label(font_frame, "", row=row, col=col)  # Spacer
         _, col = ui.add_color(font_frame, self.inset_opt['font']["color"], row=row, col=col, tooltip="Color")
+        _, col = ui.add_label_entry(font_frame, "Label size:", self.inset_opt['font']['label_size'], entry_width=4, row=row, col=col, tooltip="Label size")
+        _, col = ui.add_label_entry(font_frame, "X/Y ax:", self.inset_opt['font']['xaxis_size'], entry_width=4, row=row, col=col, tooltip="X thick size")
+        _, col = ui.add_label_entry(font_frame, "-", self.inset_opt['font']['yaxis_size'], entry_width=4, row=row, col=col, tooltip="Y thick size")
+        
+        legend_frame = tk.Frame(main_frame,borderwidth=1, relief=tk.SUNKEN)
+        legend_frame.grid(row=1,column=1)
+        col = 0; row = 0
+        _, col = ui.add_label(legend_frame, "Legend\noptions:", row=row, col=col)
+        _, col = ui.add_optionmenu(legend_frame, self.inset_opt['legend']['legend'], YN, row=row, col=col, tooltip="Show legend")
+        _, col = ui.add_entry(legend_frame, self.inset_opt['legend']['legend_size'], entry_width=6, row=row, col=col, tooltip="Size")
+        _, col = ui.add_optionmenu(legend_frame, self.inset_opt['legend']['legend_position'], LEGEND, row=row, col=col, tooltip="Position")
+        
+        
+        color ="lightgreen"
+        position_frame = tk.Frame(self.frame,borderwidth=1, bg=color, relief=tk.SUNKEN)
+        position_frame.grid(row=0,column=2)
+        row = 0; col = 0
+        ui.add_checkbutton(position_frame, "Show inset", self.inset_opt["show/hide"], row=0, col=0, colspan=3, label_font=dim.label_font(14), tooltip="Mostra/Nascondi inset", colorbg="lightgreen")
         row += 1; col = 0
-        _, col = ui.add_label_entry(font_frame, "X/Y label:", self.inset_opt['font']['xlabel_size'], entry_width=6, row=row, col=col, tooltip="Top")
-        _, col = ui.add_label_entry(font_frame, "-", self.inset_opt['font']['ylabel_size'], entry_width=6, row=row, col=col, tooltip="Top")
+        ui.add_label(position_frame, "Position:", row=row, col=col, colspan=3, colorbg=color)
         row += 1; col = 0
-        _, col = ui.add_label_entry(font_frame, "X/Y axis:", self.inset_opt['font']['xaxis_size'], entry_width=6, row=row, col=col, tooltip="Top")
-        _, col = ui.add_label_entry(font_frame, "-", self.inset_opt['font']['yaxis_size'], entry_width=6, row=row, col=col, tooltip="Top")
+        _, col = ui.add_label_entry(position_frame, "x:", self.inset_opt['position']['left'], entry_width=4, row=row, col=col, tooltip="Top", colorbg=color)
+        _, col = ui.add_label_entry(position_frame, "y:", self.inset_opt['position']['bottom'], entry_width=4, row=row, col=col, tooltip="Top", colorbg=color)
+        row += 1; col = 0
+        ui.add_label(position_frame, "Dimension:", row=row, col=col, colspan=3, colorbg=color)
+        row += 1; col = 0
+        _, col = ui.add_label_entry(position_frame, "⟷", self.inset_opt['position']['width'], entry_width=4, row=row, col=col, tooltip="Top", colorbg=color)
+        _, col = ui.add_label_entry(position_frame, "↕", self.inset_opt['position']['height'], entry_width=4, row=row, col=col, tooltip="Top", colorbg=color)
+
+        color = "lightblue"
+        body_frame = tk.Frame(self.frame , bg =color, borderwidth=1, relief=tk.SUNKEN)
+        body_frame.grid(row=0, column=3)
+        row = 0; col = 0
+        _, col = ui.add_color(body_frame, self.inset_opt["facecolor"], row=row, col=col, tooltip="Colore di sfondo dell'area del grafico")
+        _, col = ui.add_scale(body_frame, self.inset_opt['alpha_face'], from_=0, to=1, resolution=0.05, row=row, col=col, tooltip="Opacità dello sfondo del grafico", colorbg=color)
+        
+        spine_frame = tk.Frame(body_frame, bg="lightblue", borderwidth=1, relief=tk.SUNKEN)
+        spine_frame.grid(row=1, column=0,columnspan=2)
+        _, _ = ui.add_label(spine_frame, "┌────", row=0, col=0, label_font=dim.label_font(12), colorbg=color)
+        _, _ = ui.add_checkbutton(spine_frame, "T", self.inset_opt["spines"]["top"], row=0, col=1, label_font=dim.label_font(12), tooltip="Mostra/Nascondi bordo superiore", colorbg=color)
+        _, _ = ui.add_label(spine_frame, "────┐", row=0, col=2, label_font=dim.label_font(12), colorbg=color)
+        _, _ = ui.add_checkbutton(spine_frame, "L", self.inset_opt["spines"]["left"], row=1, col=0, label_font=dim.label_font(12), tooltip="Mostra/Nascondi bordo sinistro", colorbg=color)
+        _, _ = ui.add_checkbutton(spine_frame, "R", self.inset_opt["spines"]["right"], row=1, col=2, label_font=dim.label_font(12), tooltip="Mostra/Nascondi bordo destro", colorbg=color)
+        _, _ = ui.add_label(spine_frame, "└────", row=2, col=0, label_font=dim.label_font(12), colorbg=color)
+        _, _ = ui.add_checkbutton(spine_frame, "B", self.inset_opt["spines"]["bottom"], row=2, col=1, label_font=dim.label_font(12), tooltip="Mostra/Nascondi bordo inferiore", colorbg=color)
+        _, _ = ui.add_label(spine_frame, "────┘", row=2, col=2, label_font=dim.label_font(12), colorbg=color)
+        
+        color = "lightgreen"
+        grid_frame = tk.Frame(self.frame,borderwidth=1, bg=color, relief=tk.SUNKEN)
+        grid_frame.grid(row=0,column=4)
+        row = 0; col = 0
+        _, col = ui.add_label(grid_frame, "Grid", row=row, col=col, colorbg=color)
+        _, col = ui.add_optionmenu(grid_frame, self.inset_opt["grid"]["axis"], AXIS, row=row, col=col, tooltip="Axis", colorbg=color)
+        row += 1; col = 0
+        _, col = ui.add_optionmenu(grid_frame, self.inset_opt['grid']['style'], LINE, row=row, col=col, tooltip="Grid style", colorbg=color)
+        _, col = ui.add_scale(grid_frame, self.inset_opt["grid"]['lw'], from_=0, to=3, resolution=0.1, row=row, col=col, tooltip="Grid line width", colorbg=color)
+        row += 1; col = 0
+        _, col = ui.add_color(grid_frame, self.inset_opt["grid"]["color"], row=row, col=col, tooltip="Color")
+        _, col = ui.add_scale(grid_frame, self.inset_opt["grid"]["alpha"], from_ = 0, to = 1, resolution = 0.05, row=row, col=col, tooltip="Transparency", lenght=80, colorbg=color)
+
+        color ="lightblue"
+        sci_frame = tk.Frame(self.frame,borderwidth=1, bg=color, relief=tk.SUNKEN)
+        sci_frame.grid(row=0,column=5)
+        _, col = ui.add_label(sci_frame, "Scientific notation:", row=0, col=0, colspan=3, tooltip="Scegli tra formato decimale standard o scientifico", colorbg=color)
+        _, col = ui.add_optionmenu(sci_frame, self.inset_opt['sci']['style'], ['plain', 'sci'], row=1, col=0, colspan=3, tooltip="Stile:\n⦿ Plain: standard (es. 1000)\n⦿ Sci: scientifico (es. 1e3)", colorbg=color)
+        _, col = ui.add_optionmenu(sci_frame, self.inset_opt['sci']['axis'], AXIS, row=2, col=0, colspan=3, tooltip="Asse su cui applicare la notazione", colorbg=color)
+        _, col = ui.add_entry(sci_frame, self.inset_opt['sci']['min_scilimits'], entry_width=5, row=3, col=0, tooltip="Limite inferiore per notazione scientifica\n(Es: n → attiva per valori < 10^n)")
+        _, col = ui.add_label_entry(sci_frame, "-", self.inset_opt['sci']['max_scilimits'], entry_width=5, row=3, col=1, tooltip="Limite superiore per notazione scientifica\n(Es: m → attiva per valori ≥ 10^m)", colorbg=color)
+        
+        
         
     def remove_inset(self,inset_id, inset_options, all_inset_id):
         self.inset_opt = None
@@ -654,17 +1067,17 @@ class RegressionApp:
         
         row = 0; col = 0
         # Menù a tendina con i modelli
-        self.reg_type = self.data_options["plot"]["fit"]["type"]  # Mantieni come tk.StringVar
-        _, col = ui.add_label(frame, "Fit", row=row, col=col, label_font=("Arial", "12", "bold"))
+        self.reg_type = self.data_options["fit"]["type"]  # Mantieni come tk.StringVar
+        _, col = ui.add_label(frame, "Fit", row=row, col=col, label_font=("Arial", "12", "bold"), colorbg="lightgreen")
         _, col = ui.add_optionmenu(frame, self.reg_type, REGRESSION_FUNCTIONS, row=row, col=col, tooltip="Funzione di regressione")
         self.degree, col = ui.add_spinbox(frame, self.pol_degree, from_=3, to=20, increment=1, row=row, col=col, tooltip="Degree")
         self.degree.grid_forget()
-        _, col = ui.add_label_entry(frame, "Label:", self.data_options["plot"]["fit"]["label"], entry_width=60, row=row, col=col, columnspan=4)
+        _, col = ui.add_label_entry(frame, "Label:", self.data_options["fit"]["label"], entry_width=60, row=row, col=col, columnspan=4)
         row = 1; col = 1
-        _, col = ui.add_color(frame, self.data_options["plot"]["fit"]["color"], row=row, col=col, tooltip="Color")
-        _, col = ui.add_scale(frame, self.data_options["plot"]["fit"]["alpha"], from_ = 0, to = 1, resolution = 0.05, row=row, col=col, tooltip="Transparency")
-        _, col = ui.add_optionmenu(frame, self.data_options["plot"]["fit"]["line"], LINE, row=row, col=col, tooltip="Line")
-        _, col = ui.add_scale(frame, self.data_options["plot"]["fit"]["lw"], from_ = 0, to = 3, resolution = 0.1, row=row, col=col, tooltip="Line width")
+        _, col = ui.add_color(frame, self.data_options["fit"]["color"], row=row, col=col, tooltip="Color")
+        _, col = ui.add_scale(frame, self.data_options["fit"]["alpha"], from_ = 0, to = 1, resolution = 0.05, row=row, col=col, tooltip="Transparency")
+        _, col = ui.add_optionmenu(frame, self.data_options["fit"]["line"], LINE, row=row, col=col, tooltip="Line")
+        _, col = ui.add_scale(frame, self.data_options["fit"]["lw"], from_ = 0, to = 3, resolution = 0.1, row=row, col=col, tooltip="Line width")
         
         # Funzione che mostra/nasconde entry polinomiale
         def toggle_pol_entry(*args):
@@ -682,7 +1095,7 @@ class RegressionApp:
         show_frame = tk.Frame(frame)
         show_frame.grid(row=row, column=col)
         #_, col = ui.add_optionmenu(frame, self.data_options["plot"]["fit"]["plot_reg"], YN, row=row, col=col, tooltip="Show fit")
-        toggle = ToggleSwitch(show_frame, self.data_options["plot"]["fit"]["plot_reg"],["No","Yes"], tooltip_text="Show Fit")
+        toggle = ToggleSwitch(show_frame, self.data_options["fit"]["plot_reg"],["No","Yes"], tooltip_text="Show Fit")
         toggle.pack() 
 
         # Label per i risultati
@@ -693,21 +1106,91 @@ class RegressionApp:
         try:
             reg_type = self.reg_type.get()
             
-            self.x = self.data_options["common"]["x"].get()
-            self.x_err = self.data_options["common"]["x_err"].get()
-            self.y = self.data_options["plot"]["y"].get()
-            self.y_err = self.data_options["plot"]["y_err"].get()
-            
-            print("\n\nreg_ax:",self.x, self.x_err, self.y, self.y_err)
-            
-            x, y, xerr, yerr = self.read(self.file_path, self.x, self.y, self.x_err, self.y_err)
+            common = self.data_options["common"]
 
+            x_col = common["x"].get()
+            x_err = common["x_err"].get()
+            x2 = common["x2"].get()
+            xmin = common["x_min"].get()
+            xmax = common["x_max"].get()
+
+            col_filter1 = common['col_filter1'].get()
+            filter1 = common['filter1'].get()
+            col_compare_filter1 = common['col_compare_filter1'].get()
+            col_filter2 = common['col_filter2'].get()
+            filter2 = common['filter2'].get()
+            col_compare_filter2 = common['col_compare_filter2'].get()
+            col_filter3 = common['col_filter3'].get()
+            filter3 = common['filter3'].get()
+            col_compare_filter3 = common['col_compare_filter3'].get()
+            col_filter4 = common['col_filter4'].get()
+            filter4 = common['filter4'].get()
+            col_compare_filter4 = common['col_compare_filter4'].get()
+
+            if self.data_options['plot_select'].get() == 'plot':
+                plot_opt = self.data_options['plot']
+                y = plot_opt["y"].get()
+                y_err = plot_opt["y_err"].get()
+                y2 = plot_opt["y2"].get()
+                ymin = plot_opt["y_min"].get()
+                ymax = plot_opt["y_max"].get()
+
+                x, y, _, yerr = loader.read(
+                    file_path=self.file_path, 
+                    x=x_col, y=y, xerr=x_err, yerr=y_err,
+                    x2=x2, y2=y2,
+                    x_min=xmin,x_max=xmax,y_min=ymin,y_max=ymax,
+                    filters1={"cat": col_filter1,"val": filter1,"compare": col_compare_filter1},
+                    filters2={"cat": col_filter2,"val": filter2,"compare": col_compare_filter2},
+                    filters3={"cat": col_filter3,"val": filter3,"compare": col_compare_filter3},
+                    filters4={"cat": col_filter4,"val": filter4,"compare": col_compare_filter4}, 
+                    x_fun = common['x_function'].get(), x_par = common['x_parameters'].get(),
+                    y_fun = common['y_function'].get(), y_par = common['y_parameters'].get(),
+                )
+    
+            elif self.data_options['plot_select'].get() == 'hist':
+                x, _, _, _ = loader.read(
+                    file_path=self.file_path, 
+                    x=x_col, y=None, xerr=None, yerr=None,
+                    x2=x2, y2=None,
+                    x_min=xmin,x_max=xmax,y_min=None,y_max=None,
+                    filters1={"cat": col_filter1,"val": filter1,"compare": col_compare_filter1},
+                    filters2={"cat": col_filter2,"val": filter2,"compare": col_compare_filter2},
+                    filters3={"cat": col_filter3,"val": filter3,"compare": col_compare_filter3},
+                    filters4={"cat": col_filter4,"val": filter4,"compare": col_compare_filter4}, 
+                    x_fun = common['x_function'].get(), x_par = common['x_parameters'].get(),
+                    y_fun = None, y_par = None,
+                )
+
+                bins_val = int(self.data_options["hist"]["bins"].get())
+                density_str = self.data_options["hist"]["density"].get()
+                is_density = True if density_str == "True" else False
+
+                x_min_str = self.data_options["common"]["x_min"].get()
+                x_max_str = self.data_options["common"]["x_max"].get()
+                hist_range = None
+                if x_min_str and x_max_str:
+                    try:
+                        hist_range = (float(x_min_str), float(x_max_str))
+                    except ValueError:
+                        pass
+                y, bin_edges = np.histogram(x, bins=bins_val, range=hist_range, density=is_density)
+                x = (bin_edges[:-1] + bin_edges[1:]) / 2
+                sigma_fit_input = np.sqrt(y) if not is_density else None
+                if sigma_fit_input is not None:
+                    sigma_fit_input = np.where(sigma_fit_input == 0, 1, sigma_fit_input)
+                yerr = sigma_fit_input
+            #print("\n\nreg_ax:",self.x, self.x_err, self.y, self.y_err)
+            
+            
+            
+            
             if reg_type == "Linear":
-                popt, _ = curve_fit(Functions.linear, x, y)
+                popt, _ = curve_fit(Functions.linear, x, y, sigma=yerr, absolute_sigma=True)
                 y_pred = Functions.linear(x, *popt)
 
             elif reg_type == "Quadratic":
-                popt, _ = curve_fit(Functions.quadratic, x, y)
+                popt, _ = curve_fit(Functions.quadratic, x, y, sigma=yerr, absolute_sigma=True)
                 y_pred = Functions.quadratic(x, *popt)
 
             elif reg_type == "Polynomial":
@@ -719,30 +1202,95 @@ class RegressionApp:
                     self.reg_result_label.config(text="Error: polynomial degree is not valid", foreground="red")
                     return
                 
-                coeffs = np.polyfit(x, y, deg)
+                # Gestione pesi per polyfit (w = 1/sigma)
+                weights = 1/yerr if yerr is not None else None
+                coeffs = np.polyfit(x, y, deg, w=weights)
                 popt = coeffs
                 y_pred = np.poly1d(coeffs)(x)
 
             elif reg_type == "Logarithmic":
                 mask = x > 0
-                popt, _ = curve_fit(Functions.logarithmic, x[mask], y[mask])
+                popt, _ = curve_fit(Functions.logarithmic, x[mask], y[mask],
+                                    sigma=yerr[mask] if yerr is not None else None, absolute_sigma=True)
                 x, y = x[mask], y[mask]
+                if yerr is not None: yerr = yerr[mask] # Allineo yerr alla mask
                 y_pred = Functions.logarithmic(x, *popt)
 
             elif reg_type == "Exponential":
-                popt, _ = curve_fit(Functions.exponential, x, y, p0=(1, 0.1))
+                popt, _ = curve_fit(Functions.exponential, x, y,
+                                    sigma=yerr, absolute_sigma=True, p0=(1, 0.1))
                 y_pred = Functions.exponential(x, *popt)
 
             elif reg_type == "Power law":
                 mask = x > 0
-                popt, _ = curve_fit(Functions.powerlaw, x[mask], y[mask], p0=(1, 1))
+                popt, _ = curve_fit(Functions.powerlaw, x[mask], y[mask],
+                                    sigma=yerr[mask] if yerr is not None else None, absolute_sigma=True, p0=(1, 1))
                 x, y = x[mask], y[mask]
+                if yerr is not None: yerr = yerr[mask]
                 y_pred = Functions.powerlaw(x, *popt)
 
             elif reg_type == "Sigmoid":
                 p0 = [max(y), np.median(x), 1]
-                popt, _ = curve_fit(Functions.sigmoid, x, y, p0=p0, maxfev=10000)
+                popt, _ = curve_fit(Functions.sigmoid, x, y,
+                                    sigma=yerr, absolute_sigma=True, p0=p0, maxfev=10000)
                 y_pred = Functions.sigmoid(x, *popt)
+
+            # --- NUOVE DISTRIBUZIONI STATISTICHE ---
+
+            elif reg_type in ["Gaussian", "Lorentzian", "Skewed Gaussian", "Voigt"]:
+                # Calcolo stime iniziali robuste (Media e Sigma pesati)
+                # Utile per istogrammi dove y sono conteggi/frequenze
+                total_y = np.sum(y)
+                if total_y == 0: total_y = 1 # Evita divisione per zero su dati vuoti
+                
+                mean_guess = np.sum(x * y) / total_y
+                sigma_guess = np.sqrt(np.abs(np.sum(y * (x - mean_guess)**2) / total_y))
+                if sigma_guess == 0: sigma_guess = 1.0 # Fallback
+                amp_guess = np.max(y)
+
+                if reg_type == "Gaussian":
+                    p0 = [amp_guess, mean_guess, sigma_guess]
+                    popt, _ = curve_fit(Functions.gaussian, x, y, p0=p0, sigma=yerr, absolute_sigma=True, maxfev=10000)
+                    y_pred = Functions.gaussian(x, *popt)
+
+                elif reg_type == "Lorentzian":
+                    # Gamma per Lorentziana è simile a sigma
+                    p0 = [amp_guess, mean_guess, sigma_guess]
+                    popt, _ = curve_fit(Functions.lorentzian, x, y, p0=p0, sigma=yerr, absolute_sigma=True, maxfev=10000)
+                    y_pred = Functions.lorentzian(x, *popt)
+
+                elif reg_type == "Skewed Gaussian":
+                    # Alpha (skew) inizia a 0 (normale)
+                    p0 = [amp_guess, mean_guess, sigma_guess, 0]
+                    popt, _ = curve_fit(Functions.skewed_gaussian, x, y, p0=p0, sigma=yerr, absolute_sigma=True, maxfev=10000)
+                    y_pred = Functions.skewed_gaussian(x, *popt)
+                
+                elif reg_type == "Voigt":
+                    # Voigt ha sigma (Gauss) e gamma (Lorentz). Dividiamo la larghezza stimata.
+                    p0 = [amp_guess, mean_guess, sigma_guess/2, sigma_guess/2]
+                    popt, _ = curve_fit(Functions.voigt, x, y, p0=p0, sigma=yerr, absolute_sigma=True, maxfev=10000)
+                    y_pred = Functions.voigt(x, *popt)
+
+            elif reg_type == "Lognormal":
+                mask = x > 0
+                # Stima parametri per lognormale
+                # s (shape) approx 1, scale (mediana) approx picco
+                p0 = [np.max(y), 1.0, np.mean(x)] 
+                
+                popt, _ = curve_fit(Functions.lognormal, x[mask], y[mask], p0=p0,
+                                    sigma=yerr[mask] if yerr is not None else None, absolute_sigma=True, maxfev=10000)
+                
+                x, y = x[mask], y[mask]
+                if yerr is not None: yerr = yerr[mask]
+                y_pred = Functions.lognormal(x, *popt)
+
+            elif reg_type == "Exponential PDF":
+                # Stima lambda come 1/media
+                mean_val = np.abs(np.mean(x)) if np.mean(x) != 0 else 1
+                p0 = [np.max(y), 1.0 / mean_val]
+                popt, _ = curve_fit(Functions.exponential_pdf, x, y, p0=p0, sigma=yerr, absolute_sigma=True, maxfev=10000)
+                y_pred = Functions.exponential_pdf(x, *popt)
+
 
             # Calcolo R²
             ss_res = np.sum((y - y_pred) ** 2)
@@ -758,54 +1306,11 @@ class RegressionApp:
                 text=f"{reg_type} fit:\n{params_str}\nR² = {r2:.4f}",
                 foreground="blue"
             )
-            self.data_options["plot"]["fit"]["params"] = popt.tolist()  # Salva i parametri del fit nelle opzioni
-            self.data_options["plot"]["fit"]["type"].set(reg_type)  # Aggiorna il tipo di regressione nelle opzioni
+            self.data_options["fit"]["params"] = popt.tolist()  # Salva i parametri del fit nelle opzioni
+            self.data_options["fit"]["type"].set(reg_type)  # Aggiorna il tipo di regressione nelle opzioni
 
         except Exception as e:
             import traceback
             traceback.print_exc()  # Stampa il traceback completo per il debug
             self.reg_result_label.config(text=f"Errore: {e}", foreground="red")
             
-    def read(self, file_path, x, y, xerr, yerr):
-        if file_path.endswith('.txt'):
-            file_path = convert_file_to_csv(file_path)
-        if file_path.endswith('.csv'):
-            df = pd.read_csv(file_path)
-        elif file_path.endswith('.xml'):
-            df = pd.read_xml(file_path)
-        else:
-            raise ValueError("Formato file non supportato")
-        
-        df = df.replace(r'^\s*-?nan\s*$', np.nan, regex=True)
-        
-        # Rimuove le colonne 'None'
-        if x == "None": x = None
-        if y == "None": y = None
-        if xerr == "None": xerr = None
-        if yerr == "None": yerr = None
-                
-        # Dropna solo sulle colonne effettive
-        cols_to_check = [c for c in [x, y] if c is not None]
-        df = df.dropna(subset=cols_to_check)
-        
-        # Ordina se possibile
-        if x is not None:
-            df = df.sort_values(by=x)
-        
-        # Controlla se le colonne esistono nel DataFrame
-        if x and x not in df.columns:
-            raise ValueError(f"La colonna '{x}' non esiste nel file.")
-        if y and y not in df.columns:
-            raise ValueError(f"La colonna '{y}' non esiste nel file.")
-        
-        datax = df[x].values if x else None
-        datay = df[y].values if y else None
-        xerr_val = df[xerr].values if xerr else None
-        yerr_val = df[yerr].values if yerr else None
-
-        if self.data_options['common']['function'].get() != "":
-            datay = calcola(datay, self.data_options['common']['function'].get(), self.data_options['common']['parameters'].get())
-        
-        if datax is None or datay is None:
-            raise ValueError("Le colonne X e Y devono essere specificate.")
-        return datax, datay, xerr_val, yerr_val

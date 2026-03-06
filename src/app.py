@@ -82,41 +82,68 @@
 #        Plots the data based on the configuration settings.
     
 
+#------------------------------------------------------------------------------------------------------
+# 
+#   o             o  oooooo  o        ooooo   oooo   o     o  oooooo       oooo   o   o
+#    o     o     o   o       o       o       o    o  oo   oo  o           o    o  oo  o
+#     o   o o   o    oooo    o       o       o    o  o o o o  oooo        o    o  o o o
+#      o o   o o     o       o       o       o    o  o  o  o  o           o    o  o  oo
+#       o     o      oooooo  oooooo   ooooo   oooo   o     o  oooooo       oooo   o   o
+#
+#----------------------------------------------------------------------------------------------------
+
 import tkinter as tk
 import matplotlib
+import matplotlib.pyplot as plt # <--- NECESSARIO PER PULIRE LA RAM DEI GRAFICI
 matplotlib.use("TkAgg")
 from PIL import Image, ImageTk
 from main import MainPage
 from ui_elements import root, dim
 import os
+import sys
+
 BASE_DIR = os.path.dirname(__file__)
 
 class DataPlotterApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Interactive Data Plotter")
+        
+        # --- GESTIONE CHIUSURA FINESTRA ---
+        # Intercetta il click sulla "X" della finestra
+        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+        
         self.setup_ui()
 
     def setup_ui(self):
         # Sfondo
-        
-        image = Image.open(os.path.join(BASE_DIR, "sfondo.png"))
-        image = image.resize((dim.s(700), dim.s(300)))
-        self.wallpaper = ImageTk.PhotoImage(image)
+        try:
+            image = Image.open(os.path.join(BASE_DIR, "sfondo.png"))
+            image = image.resize((dim.s(700), dim.s(300)))
+            self.wallpaper = ImageTk.PhotoImage(image)
+        except Exception as e:
+            print(f"Warning: Sfondo non trovato ({e})")
+            self.wallpaper = None
 
         # Pulsante principale con immagine
         self.main_button_frame = tk.Frame(self.root)
         self.main_button_frame.grid(pady=dim.s(10))
 
         rows = 0
-        tk.Button(self.main_button_frame, image=self.wallpaper, command=self.saluto).grid(row=rows, padx=dim.s(5), pady=dim.s(5))
+        
+        # Gestione se l'immagine non esiste
+        if self.wallpaper:
+            tk.Button(self.main_button_frame, image=self.wallpaper, command=self.saluto).grid(row=rows, padx=dim.s(5), pady=dim.s(5))
+        else:
+            tk.Button(self.main_button_frame, text="Welcome", command=self.saluto).grid(row=rows, padx=dim.s(5), pady=dim.s(5))
+            
         rows += 1
 
-        self.add_data_button = tk.Button(self.main_button_frame,text="Start a New Plot",command=self.plot,font=LABEL_FONT)
+        self.add_data_button = tk.Button(self.main_button_frame, text="Start a New Plot", command=self.plot, font=LABEL_FONT)
         self.add_data_button.grid(row=rows, pady=dim.s(10))
         rows += 1
 
-        self.upload_data_button = tk.Button(self.main_button_frame,text="Upload Configuration",command=self.upload_configuration,font=LABEL_FONT)
+        self.upload_data_button = tk.Button(self.main_button_frame, text="Upload Configuration", command=self.upload_configuration, font=LABEL_FONT)
         self.upload_data_button.grid(row=rows, pady=dim.s(10))
         rows += 1
 
@@ -129,19 +156,37 @@ class DataPlotterApp:
         rows += 1
 
         # Icona no copyright
-        image = Image.open(os.path.join(BASE_DIR, "no_copyright.png"))
-        image = image.resize((dim.s(20), dim.s(20)))
-        self.no_copy = ImageTk.PhotoImage(image)
-        tk.Label(self.main_button_frame, image=self.no_copy).grid(row=rows, pady=dim.s(5))
+        try:
+            image = Image.open(os.path.join(BASE_DIR, "no_copyright.png"))
+            image = image.resize((dim.s(20), dim.s(20)))
+            self.no_copy = ImageTk.PhotoImage(image)
+            tk.Label(self.main_button_frame, image=self.no_copy).grid(row=rows, pady=dim.s(5))
+        except Exception:
+            pass
 
     def plot(self):
-        MainPage(self,self.root)
+        MainPage(self, self.root)
 
     def upload_configuration(self):
-        MainPage(self,self.root,upload_configuration=True)
+        MainPage(self, self.root, upload_configuration=True)
 
     def saluto(self):
         print("Welcome on Plotto =)")
+
+    def on_closing(self):
+        """
+        Questa funzione viene chiamata quando si preme la X.
+        Pulisce la RAM e uccide il processo Python.
+        """
+        print("\n--- CHIUSURA PROGRAMMA ---")
+        print("1. Pulizia grafici Matplotlib in memoria...")
+        plt.close('all') 
+        
+        print("2. Distruzione finestra...")
+        self.root.destroy()
+        
+        print("3. Arresto forzato processo Python (Zombie Kill).")
+        os._exit(0) # Questo impedisce che il processo rimanga attivo in background
 
 if __name__ == "__main__":
     LABEL_FONT = dim.label_font()

@@ -1,3 +1,4 @@
+from fileinput import filename
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 import matplotlib
@@ -11,7 +12,6 @@ from default_options import DefaultContour, DefaultQuiver, DefaultPolar, Default
 from data_options import DataOptions, InsetOptions, InsertFunction
 from create_plot import CreatePlot
 import json
-import gc
 
 LABEL_FONT = dim.label_font()
 ENTRY_FONT = dim.entry_font()
@@ -206,7 +206,7 @@ class MainPage(tk.Frame):
         scrollbar_function.grid(row=0, column=1, sticky="ns")
         self.canvas_function.configure(yscrollcommand=scrollbar_function.set)
 
-        self.scrollable_function_frame = tk.Frame(self.canvas_function, bg="lightblue")
+        self.scrollable_function_frame = tk.Frame(self.canvas_function)
         self.canvas_function.create_window((0, 0), window=self.scrollable_function_frame, anchor="nw")
         self.scrollable_function_frame.bind(
             "<Configure>",
@@ -316,7 +316,7 @@ class MainPage(tk.Frame):
                   command=lambda: self.toggle_manager.toggle("default")).grid(row=0, column=3, padx=2, pady=2)
         tk.Button(frame, text="Latex → Numpy converter", font=LABEL_FONT,
                   command=lambda: self.toggle_manager.toggle("latex_convert")).grid(row=0, column=4, padx=2, pady=2)
-        tk.Button(frame, text="Constants", font=LABEL_FONT,
+        tk.Button(frame, text="Constant", font=LABEL_FONT,
                   command=lambda: self.toggle_manager.toggle("constant")).grid(row=0, column=5, padx=2, pady=2)
 
 
@@ -472,7 +472,7 @@ class MainPage(tk.Frame):
             options_content_frame.grid_columnconfigure(2, weight=1) 
 
             # --- 2a. OPZIONI STRUTTURA SUBPLOT ---
-            struct_label = tk.Label(options_content_frame, text="Subplot Structure", font=LABEL_FONT, bg="white", fg="black")
+            struct_label = tk.Label(options_content_frame, text="Subplot Structure", font=LABEL_FONT, bg="white", fg="blue")
             struct_label.grid(row=0, column=0, sticky="w")
             
             subplot_struct_inner = tk.Frame(options_content_frame, bg="white")
@@ -480,13 +480,13 @@ class MainPage(tk.Frame):
             subplot_struct_inner.grid(row=1, column=0, sticky="nsew")
             
             # CHIAMATA IMPORTANTE:
-            SubplotOptions().options(subplot_struct_inner, self.subplot_states[sid]["structure"], self.general_options["structure"])
+            SubplotOptions().options(subplot_struct_inner, self.subplot_states[sid]["structure"])
 
             # --- SEPARATORE ---
             tk.Frame(options_content_frame, width=1, bg="grey").grid(row=0, column=1, rowspan=2, sticky="ns", padx=10)
 
             # --- 2b. OPZIONI LEGENDA ---
-            legend_label = tk.Label(options_content_frame, text="Legend Configuration", font=LABEL_FONT, bg="white", fg="black")
+            legend_label = tk.Label(options_content_frame, text="Legend Configuration", font=LABEL_FONT, bg="white", fg="blue")
             legend_label.grid(row=0, column=2, sticky="w")
             
             legend_inner = tk.Frame(options_content_frame, bg="white")
@@ -497,29 +497,29 @@ class MainPage(tk.Frame):
         """Pulisce l'interfaccia e ricrea i widget basandosi sullo stato del subplot attivo."""
         
         # 1. SVUOTA TUTTI I FRAME
-        # Usiamo una lista temporanea per distruggere ed evitare conflitti di indice
         for widget in self.scrollable_frame.winfo_children():
             widget.destroy()
         for widget in self.scrollable_function_frame.winfo_children():
             widget.destroy()
-        for widget in self.scrollable_inset_frame.winfo_children(): 
+        for widget in self.scrollable_inset_frame.winfo_children(): # SVUOTA ANCHE GLI INSET
             widget.destroy()
-        # ------------------------------
 
         # 2. GESTIONE VISIBILITÀ INSET FRAME
+        # Controlla se il subplot attivo aveva l'inset frame aperto
         if self.subplot_states[self.active_subplot_id].get("inset_frame_visible", False):
             self.add_inset_frame()
         else:
             self.remove_inset_frame()
 
-        # 3. RICREA I BOTTONI "ADD" (Container unico per ordine pulito)
-        add_buttons_container = tk.Frame(self.scrollable_frame, bg="lightgrey")
+        # 3. RICREA I BOTTONI "ADD"
+        add_buttons_container = tk.Frame(self.scrollable_frame, bg="white")
         add_buttons_container.pack(fill=tk.X, padx=5, pady=5)
-        
+        # Bottone Add File (a sinistra)
         tk.Button(add_buttons_container, text="Add file",
                 command=lambda: self.add_file(self.scrollable_frame, 0),
                 font=LABEL_FONT).pack(side=tk.LEFT, padx=2, expand=True, fill=tk.X)
 
+        # Bottone Add Inset (a destra)
         tk.Button(add_buttons_container, text="Add Inset", 
                 font=LABEL_FONT,
                 command=lambda: self.add_inset_frame(),
@@ -529,29 +529,30 @@ class MainPage(tk.Frame):
                 command=lambda: self.add_function(self.scrollable_function_frame, 0),
                 font=LABEL_FONT).pack(padx=5, pady=5, fill=tk.X)
                 
-        tk.Button(self.scrollable_inset_frame, text="Add inset", 
+        tk.Button(self.scrollable_inset_frame, text="Add inset", # REINSERISCI BOTTONE INSET
                   command=self.add_inset, font=LABEL_FONT).pack(padx=5, pady=5, fill=tk.X)
 
-        # 4. SOSPENSIONE AGGIORNAMENTO GRAFICO (Opzionale ma aiuta la velocità)
-        # self.master.update_idletasks() # A volte aiuta, a volte no. Prova senza prima.
-
-        # 5. RICOSTRUISCI GLI INSET
+        # 4. RICOSTRUISCI GLI INSET ESISTENTI PER QUESTO SUBPLOT
+        # Saltiamo inset_0 perché è quello principale (già gestito dai bottoni sopra)
         for i_id in self.inset_id:
             if i_id != "inset_0":
-                idx = int(i_id.split('_')[1])
-                self.add_inset(upload=True, inset_id=i_id, inset_index=idx)
+                # Ricreiamo l'oggetto grafico InsetOptions
+                # Nota: add_inset deve gestire il parametro upload=True per non incrementare contatori
+                self.add_inset(upload=True, inset_id=i_id, inset_index=int(i_id.split('_')[1]))
 
-        # 6. RICOSTRUISCI FILE
+        # 5. RICOSTRUISCI FILE E FUNZIONI (il tuo codice esistente...)
         for d_id in self.data_id:
+            # Assicurati che add_file venga chiamato sul frame corretto 
+            # (se il file appartiene a un inset, deve andare nel frame dell'inset)
+            # Per semplicità qui gestiamo quelli dell'inset principale (0)
             if self.data_options[d_id]['inset'] == 0:
                 path = self.data_options[d_id]['file path']
-                # Qui ora add_file è veloce perché NON legge il file dal disco
                 self.add_file(self.scrollable_frame, 0, data_id=d_id, file_path=path, upload=True)
 
-        # 7. RICOSTRUISCI FUNZIONI
         for f_id in self.function_id:
             if self.function_options[f_id]['inset'] == 0:
                 self.add_function(self.scrollable_function_frame, 0, function_id=f_id, upload=True)
+        
         
     def delete_subplot(self, sid, container_widget):
         # Chiedi conferma
@@ -743,7 +744,6 @@ class MainPage(tk.Frame):
             self.plot_frame,
             self.subplot_states,
             self.subplot_id,
-            self.active_subplot_id,
             self.general_options,
             self.default_options,
             self.data_options,
@@ -865,7 +865,7 @@ class MenuToggleManager:
             "opzioni_font": lambda: FontOptions().options(self.content_frame, general_options['font']),
             "default": lambda: main_page.default_buttons(self.content_frame),
             "latex_convert": lambda: LatexConvert().convertion(self.content_frame),
-            "constant": lambda: Constant().constant(self.content_frame),
+            "constant": lambda: Constant().convertion(self.content_frame),
 
             "plot": lambda: DefaultPlot().options(self.default_frame, default_options['plot']),
             "hist": lambda: DefaultHist().options(self.default_frame, default_options['hist']),
